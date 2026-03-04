@@ -14,7 +14,7 @@ import ViewerToolbar from "./ViewerToolbar";
 import { buildRevealPlan, type BuildPhase } from "./StaggeredReveal";
 import type { ArchitecturePayload, ArchEdge, ArchNode } from "./types";
 
-const API = "http://localhost:8000/api";
+const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 type ViewerState = "idle" | "loading" | "ready" | "error";
 
 interface ArchitectureViewerProps {

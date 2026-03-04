@@ -8,7 +8,7 @@ import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
 import NodeIntelligencePanel from "@/components/NodeIntelligencePanel";
 
-const API = "http://localhost:8000/api";
+const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
 
 type WorkspaceState = "idle" | "generating" | "ready" | "error";
 
