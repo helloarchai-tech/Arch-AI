@@ -175,7 +175,16 @@ def generate_architecture(
         set_classification(project_id, classification)
         ctx = get_context(project_id)
     else:
-        idea = ctx.get("idea", idea)
+        incoming_idea = (idea or "").strip()
+        existing_idea = (ctx.get("idea", "") or "").strip()
+        if incoming_idea and incoming_idea != existing_idea:
+            update_context(project_id, idea=incoming_idea, interview_answers={}, constraints={})
+            new_classification = classify_intent(incoming_idea)
+            set_classification(project_id, new_classification)
+            ctx = get_context(project_id)
+            idea = incoming_idea
+        else:
+            idea = existing_idea or idea
 
     interview_answers = ctx.get("interview_answers", {})
     constraints_dict = ctx.get("constraints", {})

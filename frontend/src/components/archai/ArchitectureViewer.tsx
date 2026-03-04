@@ -206,11 +206,15 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
         setTechStackItems(extractTechStack(data));
         fetchComponentParagraphs(cleanPrompt, data);
         startReveal(data);
-      } catch {
-        const fallback = buildFallbackArchitecture(cleanPrompt);
-        setTechStackItems(extractTechStack(fallback));
-        fetchComponentParagraphs(cleanPrompt, fallback);
-        startReveal(fallback);
+      } catch (error) {
+        console.error("[Arch.AI] generation failed", error);
+        clearTimers();
+        fullArchitectureRef.current = null;
+        setDisplayNodes([]);
+        setDisplayEdges([]);
+        setRevealMeta(false);
+        setTechStackItems([]);
+        setState("error");
       }
     },
     [projectId, startReveal, fetchComponentParagraphs]
@@ -504,78 +508,6 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
   );
 }
 
-function buildFallbackArchitecture(idea: string): ArchitecturePayload {
-  const base = [
-    { id: "c1", layer: "client", label: "Web Dashboard Client", tech: "React + TypeScript", x: 130, y: 90 },
-    { id: "c2", layer: "client", label: "Farmer Voice Client", tech: "Flutter + Vosk", x: 420, y: 90 },
-    { id: "g1", layer: "gateway", label: "API Gateway", tech: "Kong + Rate Limit", x: 300, y: 280 },
-    { id: "g2", layer: "gateway", label: "Auth Service", tech: "OAuth2 + JWT", x: 620, y: 280 },
-    { id: "s1", layer: "service", label: "Irrigation Controller", tech: "FastAPI + Celery", x: 200, y: 470 },
-    { id: "s2", layer: "service", label: "Prediction Engine", tech: "PyTorch + Feature Flags", x: 520, y: 470 },
-    { id: "s3", layer: "service", label: "Notification Orchestrator", tech: "Go + Kafka", x: 840, y: 470 },
-    { id: "d1", layer: "data", label: "Telemetry Timeseries DB", tech: "TimescaleDB", x: 250, y: 660 },
-    { id: "d2", layer: "data", label: "Cache & Session Store", tech: "Redis", x: 560, y: 660 },
-    { id: "d3", layer: "data", label: "Analytics Warehouse", tech: "ClickHouse", x: 870, y: 660 },
-    { id: "e1", layer: "external", label: "Weather Provider", tech: "OpenWeather API", x: 360, y: 860 },
-    { id: "e2", layer: "external", label: "SMS Gateway", tech: "Twilio", x: 700, y: 860 },
-  ];
-
-  const nodes: ArchNode[] = base.map((node) => ({
-    id: node.id,
-    type: "component",
-    position: { x: node.x, y: node.y },
-    data: {
-      label: node.label,
-      tech: node.tech,
-      description: "Auto-generated fallback component with reasonable production defaults.",
-      layer: node.layer as ArchNode["data"]["layer"],
-      category:
-        node.layer === "data" ? "database" : node.layer === "external" ? "external" : "backend",
-      icon:
-        node.layer === "client"
-          ? "monitor"
-          : node.layer === "gateway"
-            ? "shield"
-            : node.layer === "data"
-              ? "database"
-              : node.layer === "external"
-                ? "globe"
-                : "cpu",
-    },
-  }));
-
-  const edgePairs = [
-    ["c1", "g1"],
-    ["c2", "g1"],
-    ["g1", "g2"],
-    ["g1", "s1"],
-    ["g1", "s2"],
-    ["g2", "s3"],
-    ["s1", "d1"],
-    ["s2", "d1"],
-    ["s2", "d2"],
-    ["s2", "d3"],
-    ["s3", "d2"],
-    ["e1", "s2"],
-    ["e2", "s3"],
-  ];
-
-  const edges: ArchEdge[] = edgePairs.map(([source, target], idx) => ({
-    id: `e${idx}`,
-    source,
-    target,
-    label: "flow",
-    animated: true,
-  }));
-
-  return {
-    title: idea.slice(0, 90),
-    summary: "Generated using fallback AI template.",
-    nodes,
-    edges,
-  };
-}
-
 function extractTechStack(payload: Partial<ArchitecturePayload> | Record<string, unknown>) {
   const stack = (payload as ArchitecturePayload).techStack;
   if (Array.isArray(stack) && stack.length) {
@@ -614,4 +546,3 @@ function buildComponentParagraph(node: ArchNode, index: number, total: number) {
     "Use this step to validate responsibility, placement, and integration flow.",
   ].join("\n");
 }
-
