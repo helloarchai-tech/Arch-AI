@@ -5,9 +5,8 @@ Supports Ollama Cloud (gpt-oss:120b-cloud) and OpenAI-compatible APIs.
 
 import logging
 import os
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Depends, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from routes.architecture import router as architecture_router
@@ -40,25 +39,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── API Key Auth Middleware ───────────────────────────────────────────────
-API_SECRET = os.getenv("API_SECRET_KEY", "my-super-secret-key")
+# ── API Key Dependency (applied per-router, not globally) ────────────────
+BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "my-super-secret-key")
 
-@app.middleware("http")
-async def verify_api_key(request: Request, call_next):
-    # Allow CORS preflight requests through without auth
-    if request.method == "OPTIONS":
-        return await call_next(request)
-    api_key = request.headers.get("x-api-key")
-    if api_key != API_SECRET:
-        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
-    return await call_next(request)
+def verify_api_key(x_api_key: str = Header(None)):
+    if x_api_key != BACKEND_API_KEY:
+        raise HTTPException(status_code=401, detail="Unauthorized")
 
-# Register routes
-app.include_router(architecture_router)
-app.include_router(projects_router)
+# Register routes — API key required only for /api/* routes
+app.include_router(architecture_router, dependencies=[Depends(verify_api_key)])
+app.include_router(projects_router, dependencies=[Depends(verify_api_key)])
 
 
-import os
 import json
 import urllib.request
 from urllib.error import URLError
