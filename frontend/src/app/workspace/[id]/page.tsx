@@ -8,7 +8,8 @@ import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
 import NodeIntelligencePanel from "@/components/NodeIntelligencePanel";
 
-const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 
 type WorkspaceState = "idle" | "generating" | "ready" | "error";
 
@@ -64,7 +65,7 @@ export default function WorkspacePage() {
       try {
         const res = await fetch(`${API}/generate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
           body: JSON.stringify({ idea: ideaText, project_id: projectId }),
         });
         const data = await res.json();
@@ -145,7 +146,7 @@ export default function WorkspacePage() {
     try {
       const res = await fetch(`${API}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
         body: JSON.stringify({
           message,
           project_id: projectId,

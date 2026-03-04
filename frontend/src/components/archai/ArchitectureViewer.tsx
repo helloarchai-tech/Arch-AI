@@ -14,7 +14,8 @@ import ViewerToolbar from "./ViewerToolbar";
 import { buildRevealPlan, type BuildPhase } from "./StaggeredReveal";
 import type { ArchitecturePayload, ArchEdge, ArchNode } from "./types";
 
-const API = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api";
+const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY || "";
 type ViewerState = "idle" | "loading" | "ready" | "error";
 
 interface ArchitectureViewerProps {
@@ -162,7 +163,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       try {
         const res = await fetch(`${API}/component-paragraphs`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
           body: JSON.stringify({
             project_id: projectId,
             idea,
@@ -197,7 +198,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       try {
         const res = await fetch(`${API}/generate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
           body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
         });
         const data = await res.json();
@@ -240,7 +241,9 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
 
       // Prefer prompt/context already linked to this project id to avoid stale sidebar text.
       try {
-        const ctxRes = await fetch(`${API}/project/${projectId}/context`);
+        const ctxRes = await fetch(`${API}/project/${projectId}/context`, {
+          headers: { "x-api-key": API_KEY },
+        });
         if (ctxRes.ok) {
           const ctx = await ctxRes.json();
           const idea = (ctx?.idea || "").trim();

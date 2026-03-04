@@ -4,8 +4,10 @@ Supports Ollama Cloud (gpt-oss:120b-cloud) and OpenAI-compatible APIs.
 """
 
 import logging
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 
 from routes.architecture import router as architecture_router
@@ -37,6 +39,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── API Key Auth Middleware ───────────────────────────────────────────────
+API_SECRET = os.getenv("API_SECRET_KEY", "my-super-secret-key")
+
+@app.middleware("http")
+async def verify_api_key(request: Request, call_next):
+    # Allow CORS preflight requests through without auth
+    if request.method == "OPTIONS":
+        return await call_next(request)
+    api_key = request.headers.get("x-api-key")
+    if api_key != API_SECRET:
+        return JSONResponse(status_code=401, content={"detail": "Unauthorized"})
+    return await call_next(request)
 
 # Register routes
 app.include_router(architecture_router)
