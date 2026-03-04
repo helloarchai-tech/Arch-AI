@@ -1,0 +1,357 @@
+{
+  "domain": "fintech",
+  "label": "Fintech / Financial Platform",
+  "components": [
+    {
+      "id": "web_app",
+      "name": "Web Dashboard",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "Secure web dashboard with 2FA",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS/TLS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "mobile_app",
+      "name": "Mobile App",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React Native / Swift",
+      "icon": "monitor",
+      "core": true,
+      "base_cost": {
+        "low": 40,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway + WAF",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "AWS API GW + WAF",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Rate limiting, WAF, DDoS protection",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "auth_service",
+          "label": "Verify"
+        },
+        {
+          "target": "transaction_service",
+          "label": "Transact"
+        },
+        {
+          "target": "account_service",
+          "label": "Account"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "auth_service",
+      "name": "Auth & 2FA Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "OAuth 2.0 / TOTP",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "Multi-factor auth, biometric, device binding",
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "user_db",
+          "label": "Credentials"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "kyc_service",
+      "name": "KYC / AML Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Onfido / Jumio SDK",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "KYC/AML",
+      "tech_reason": "Identity verification, sanctions screening, PEP checks",
+      "base_cost": {
+        "low": 100,
+        "high": 300
+      },
+      "connects_to": [
+        {
+          "target": "user_db",
+          "label": "Verification status"
+        },
+        {
+          "target": "compliance_db",
+          "label": "Audit trail"
+        }
+      ],
+      "scalability_score": 5,
+      "latency_impact": 50,
+      "complexity_weight": 8,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "account_service",
+      "name": "Account Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Java Spring",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Account management, balance tracking, statements",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "ledger_service",
+          "label": "Balance"
+        },
+        {
+          "target": "user_db",
+          "label": "Read/Write"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "transaction_service",
+      "name": "Transaction Processor",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Java / Go (high performance)",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Transactions",
+      "tech_reason": "ACID transactions, idempotency, double-entry bookkeeping",
+      "base_cost": {
+        "low": 150,
+        "high": 350
+      },
+      "connects_to": [
+        {
+          "target": "ledger_service",
+          "label": "Record"
+        },
+        {
+          "target": "fraud_engine",
+          "label": "Check",
+          "animated": true
+        },
+        {
+          "target": "notification_service",
+          "label": "Notify"
+        }
+      ],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 7,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "ledger_service",
+      "name": "Ledger / Core Banking",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Custom / Tink",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Ledger",
+      "tech_reason": "Immutable double-entry ledger, reconciliation",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [
+        {
+          "target": "ledger_db",
+          "label": "Entries"
+        }
+      ],
+      "scalability_score": 4,
+      "latency_impact": 15,
+      "complexity_weight": 8,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "fraud_engine",
+      "name": "Fraud Detection",
+      "category": "ai",
+      "layer": "service",
+      "tech": "ML Model / Rules Engine",
+      "icon": "brain",
+      "core": true,
+      "stack_category": "Fraud Detection",
+      "tech_reason": "Real-time fraud scoring, anomaly detection",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "compliance_db",
+          "label": "Flags"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 20,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "notification_service",
+      "name": "Notification Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "SNS / Twilio",
+      "icon": "mail",
+      "core": false,
+      "base_cost": {
+        "low": 25,
+        "high": 60
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "compliance_engine",
+      "name": "Compliance Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Custom Rules / Chainalysis",
+      "icon": "shield",
+      "core": false,
+      "stack_category": "Compliance",
+      "tech_reason": "PCI-DSS, SOC2, GDPR, regulatory reporting",
+      "base_cost": {
+        "low": 75,
+        "high": 180
+      },
+      "connects_to": [
+        {
+          "target": "compliance_db",
+          "label": "Reports"
+        }
+      ],
+      "scalability_score": 5,
+      "latency_impact": 15,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high",
+      "min_scale": "startup"
+    },
+    {
+      "id": "user_db",
+      "name": "User Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL (encrypted)",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "Encrypted at rest, PII handling, audit columns",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "ledger_db",
+      "name": "Ledger Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL / CockroachDB",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Ledger DB",
+      "tech_reason": "Immutable append-only ledger with strong consistency",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "compliance_db",
+      "name": "Audit / Compliance DB",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL + S3 archives",
+      "icon": "database",
+      "core": true,
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 15,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high"
+    }
+  ]
+}

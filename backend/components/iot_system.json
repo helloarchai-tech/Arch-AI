@@ -1,0 +1,396 @@
+{
+  "domain": "iot_system",
+  "label": "IoT / Smart Device System",
+  "components": [
+    {
+      "id": "device_app",
+      "name": "Device Firmware / App",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "C/C++ / MicroPython",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Firmware",
+      "tech_reason": "Lightweight firmware for constrained devices",
+      "base_cost": {
+        "low": 0,
+        "high": 0
+      },
+      "connects_to": [
+        {
+          "target": "mqtt_broker",
+          "label": "MQTT"
+        },
+        {
+          "target": "edge_gateway",
+          "label": "Telemetry"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "mobile_app",
+      "name": "Control App (Mobile)",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React Native / Flutter",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Mobile",
+      "tech_reason": "Cross-platform device control and monitoring",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "edge_gateway",
+      "name": "Edge Gateway",
+      "category": "infrastructure",
+      "layer": "gateway",
+      "tech": "AWS Greengrass / Azure IoT Edge",
+      "icon": "server",
+      "core": false,
+      "stack_category": "Edge Computing",
+      "tech_reason": "Local processing, protocol translation, offline buffering",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "mqtt_broker",
+          "label": "Forward"
+        },
+        {
+          "target": "telemetry_ingestion",
+          "label": "Stream"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 3,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high",
+      "min_scale": "startup"
+    },
+    {
+      "id": "mqtt_broker",
+      "name": "MQTT Broker",
+      "category": "infrastructure",
+      "layer": "gateway",
+      "tech": "EMQX / Mosquitto",
+      "icon": "mail",
+      "core": true,
+      "stack_category": "MQTT",
+      "tech_reason": "Lightweight pub/sub messaging for IoT devices",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "telemetry_ingestion",
+          "label": "Messages"
+        },
+        {
+          "target": "device_registry",
+          "label": "Auth"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 5,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "api_gateway",
+      "name": "REST API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / AWS API GW",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "API Gateway",
+      "tech_reason": "REST API for mobile/web, device management API",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "device_manager",
+          "label": "Manage"
+        },
+        {
+          "target": "analytics_service",
+          "label": "Query"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "device_registry",
+      "name": "Device Registry",
+      "category": "backend",
+      "layer": "service",
+      "tech": "AWS IoT Core / Custom",
+      "icon": "server",
+      "core": false,
+      "stack_category": "Device Registry",
+      "tech_reason": "Device identity, provisioning, certificate management",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Device records"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "high",
+      "min_scale": "startup"
+    },
+    {
+      "id": "device_manager",
+      "name": "Device Manager",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Node.js",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Device lifecycle, commands, OTA updates, groups",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "device_registry",
+          "label": "Lookup"
+        },
+        {
+          "target": "ota_service",
+          "label": "Deploy"
+        },
+        {
+          "target": "primary_db",
+          "label": "State"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "telemetry_ingestion",
+      "name": "Telemetry Ingestion",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Kafka / Kinesis",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Stream Processing",
+      "tech_reason": "High-throughput data ingestion from thousands of devices",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [
+        {
+          "target": "timeseries_db",
+          "label": "Store"
+        },
+        {
+          "target": "rules_engine",
+          "label": "Process",
+          "animated": true
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "rules_engine",
+      "name": "Rules / Alert Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Apache Flink / Custom",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Rules Engine",
+      "tech_reason": "Real-time alerting on device anomalies and thresholds",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "notification_service",
+          "label": "Alert"
+        },
+        {
+          "target": "primary_db",
+          "label": "Rules config"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "ota_service",
+      "name": "OTA Update Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Custom / Mender.io",
+      "icon": "server",
+      "core": false,
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "object_storage",
+          "label": "Firmware blobs"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "growth"
+    },
+    {
+      "id": "analytics_service",
+      "name": "Device Analytics",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Apache Superset / Grafana",
+      "icon": "bar-chart",
+      "core": false,
+      "stack_category": "Analytics",
+      "tech_reason": "Dashboards for device fleet health and telemetry trends",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "timeseries_db",
+          "label": "Query"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "growth"
+    },
+    {
+      "id": "notification_service",
+      "name": "Notification Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "SNS / Firebase",
+      "icon": "mail",
+      "core": false,
+      "base_cost": {
+        "low": 20,
+        "high": 50
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "timeseries_db",
+      "name": "Time-Series Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "InfluxDB / TimescaleDB",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Time-Series DB",
+      "tech_reason": "Optimized for high-volume time-stamped sensor data",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "Device metadata, user accounts, rules configuration",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "object_storage",
+      "name": "Object Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 / GCS",
+      "icon": "hard-drive",
+      "core": false,
+      "stack_category": "Storage",
+      "tech_reason": "Firmware images, device logs, data exports",
+      "base_cost": {
+        "low": 25,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 10,
+      "latency_impact": 20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    }
+  ]
+}

@@ -1,0 +1,159 @@
+"use client";
+
+import { useState } from "react";
+import {
+    TrendingUp,
+    ChevronDown,
+    ChevronUp,
+    DollarSign,
+    AlertTriangle,
+    Shield,
+    Server,
+    Info,
+} from "lucide-react";
+import HealthScore from "./HealthScore";
+
+interface InsightsPanelProps {
+    healthScores?: Record<string, number>;
+    healthDetails?: Record<string, { score: number; reasons: string[] }>;
+    techStack?: { category: string; technology: string; reason: string }[];
+    costEstimate?: { monthly?: string; yearly?: string; breakdown?: { service: string; cost: string }[] };
+    risks?: string[];
+    securitySuggestions?: string[];
+}
+
+export default function InsightsPanel({
+    healthScores = {},
+    healthDetails,
+    techStack = [],
+    costEstimate = {},
+    risks = [],
+    securitySuggestions = [],
+}: InsightsPanelProps) {
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>({
+        health: true,
+        stack: true,
+        cost: true,
+        risks: false,
+        security: false,
+    });
+
+    const toggle = (key: string) =>
+        setOpenSections((prev) => ({ ...prev, [key]: !prev[key] }));
+
+    const scores = [
+        { key: "scalability", label: "Scalability", color: "#6366f1" },
+        { key: "costEfficiency", label: "Cost", color: "#f59e0b" },
+        { key: "security", label: "Security", color: "#8b5cf6" },
+        { key: "maintainability", label: "Maintain", color: "#06b6d4" },
+    ];
+
+    return (
+        <div style={{ padding: "20px", display: "flex", flexDirection: "column", gap: "16px" }}>
+            {/* Header */}
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "4px" }}>
+                <TrendingUp size={16} style={{ color: "#a5b4fc" }} />
+                <span style={{ fontSize: "15px", fontWeight: 600, color: "#e2e8f0" }}>Architecture Insights</span>
+            </div>
+
+            {/* Health Scores */}
+            <Section title="Health Score" open={openSections.health} onToggle={() => toggle("health")}>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                    {scores.map(({ key, label, color }) => (
+                        <div key={key} style={{ textAlign: "center" }}>
+                            <HealthScore score={healthScores[key] || 0} color={color} size={72} />
+                            <p style={{ fontSize: "11px", color: "#94a3b8", marginTop: "6px" }}>{label}</p>
+                        </div>
+                    ))}
+                </div>
+                {/* Health reasons */}
+                {healthDetails && (
+                    <div style={{ marginTop: "12px", display: "flex", flexDirection: "column", gap: "6px" }}>
+                        {Object.entries(healthDetails).slice(0, 2).map(([key, detail]) => (
+                            detail.reasons?.slice(0, 2).map((reason, i) => (
+                                <div key={`${key}-${i}`} style={{ display: "flex", alignItems: "flex-start", gap: "6px", fontSize: "11px", color: reason.startsWith("✓") ? "#34d399" : "#fbbf24", lineHeight: 1.4 }}>
+                                    <span>{reason}</span>
+                                </div>
+                            ))
+                        ))}
+                    </div>
+                )}
+            </Section>
+
+            {/* Tech Stack */}
+            <Section title="Tech Stack" open={openSections.stack} onToggle={() => toggle("stack")}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                    {techStack.map((item, i) => (
+                        <div key={i} style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+                            <span style={{ fontSize: "10px", fontWeight: 600, color: "#6366f1", minWidth: "85px", textTransform: "uppercase", marginTop: "2px" }}>
+                                {item.category}
+                            </span>
+                            <div>
+                                <span style={{ fontSize: "13px", fontWeight: 500, color: "#e2e8f0" }}>{item.technology}</span>
+                                {item.reason && (
+                                    <p style={{ fontSize: "11px", color: "#64748b", marginTop: "2px", lineHeight: 1.4 }}>{item.reason}</p>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </Section>
+
+            {/* Cost Estimate */}
+            <Section title="Cost Estimate" open={openSections.cost} onToggle={() => toggle("cost")} icon={<DollarSign size={14} />}>
+                <div style={{ marginBottom: "12px" }}>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>Monthly</span>
+                    <p style={{ fontSize: "22px", fontWeight: 700, color: "#e2e8f0" }}>{costEstimate.monthly || "N/A"}</p>
+                    <span style={{ fontSize: "11px", color: "#64748b" }}>Yearly: {costEstimate.yearly || "N/A"}</span>
+                </div>
+                {costEstimate.breakdown?.map((item, i) => (
+                    <div key={i} style={{ display: "flex", justifyContent: "space-between", padding: "6px 0", borderTop: "1px solid rgba(255,255,255,0.04)", fontSize: "12px" }}>
+                        <span style={{ color: "#94a3b8" }}>{item.service}</span>
+                        <span style={{ color: "#e2e8f0", fontWeight: 500 }}>{item.cost}</span>
+                    </div>
+                ))}
+            </Section>
+
+            {/* Risks */}
+            <Section title={`Risks (${risks.length})`} open={openSections.risks} onToggle={() => toggle("risks")} icon={<AlertTriangle size={14} />}>
+                {risks.map((risk, i) => (
+                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", padding: "8px 0", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                        <AlertTriangle size={12} style={{ color: "#fbbf24", marginTop: "2px", flexShrink: 0 }} />
+                        <span style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.5 }}>{risk}</span>
+                    </div>
+                ))}
+            </Section>
+
+            {/* Security */}
+            <Section title={`Security (${securitySuggestions.length})`} open={openSections.security} onToggle={() => toggle("security")} icon={<Shield size={14} />}>
+                {securitySuggestions.map((sug, i) => (
+                    <div key={i} style={{ display: "flex", gap: "8px", alignItems: "flex-start", padding: "8px 0", borderTop: i > 0 ? "1px solid rgba(255,255,255,0.04)" : "none" }}>
+                        <Shield size={12} style={{ color: "#6366f1", marginTop: "2px", flexShrink: 0 }} />
+                        <span style={{ fontSize: "12px", color: "#94a3b8", lineHeight: 1.5 }}>{sug}</span>
+                    </div>
+                ))}
+            </Section>
+        </div>
+    );
+}
+
+/* ── Collapsible Section ───────────────────────────────────── */
+function Section({ title, open, onToggle, icon, children }: {
+    title: string; open: boolean; onToggle: () => void; icon?: React.ReactNode; children: React.ReactNode;
+}) {
+    return (
+        <div style={{ borderRadius: "12px", border: "1px solid rgba(255,255,255,0.04)", background: "rgba(14,14,22,0.5)", overflow: "hidden" }}>
+            <button
+                onClick={onToggle}
+                style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "12px 16px", background: "none", border: "none", cursor: "pointer", color: "#e2e8f0" }}
+            >
+                <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                    {icon}
+                    <span style={{ fontSize: "13px", fontWeight: 600 }}>{title}</span>
+                </div>
+                {open ? <ChevronUp size={14} color="#64748b" /> : <ChevronDown size={14} color="#64748b" />}
+            </button>
+            {open && <div style={{ padding: "0 16px 16px" }}>{children}</div>}
+        </div>
+    );
+}

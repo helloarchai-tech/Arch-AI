@@ -1,0 +1,305 @@
+{
+  "domain": "devops_tool",
+  "label": "DevOps / Developer Tool",
+  "components": [
+    {
+      "id": "web_ui",
+      "name": "Web Dashboard",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "Developer-friendly UI with dark mode, terminal views",
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "cli_tool",
+      "name": "CLI Tool",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "Go / Rust",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "CLI",
+      "tech_reason": "Fast native CLI for developer workflows",
+      "base_cost": {
+        "low": 0,
+        "high": 0
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "API calls"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / Traefik",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "API key auth, rate limiting, routing",
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "core_service",
+          "label": "Route"
+        },
+        {
+          "target": "webhook_handler",
+          "label": "Webhooks"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "core_service",
+      "name": "Core Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Go / FastAPI",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Main business logic, project management, configs",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Read/Write"
+        },
+        {
+          "target": "pipeline_engine",
+          "label": "Trigger"
+        },
+        {
+          "target": "agent_pool",
+          "label": "Dispatch"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "pipeline_engine",
+      "name": "Pipeline Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Temporal / Argo Workflows",
+      "icon": "zap",
+      "core": false,
+      "stack_category": "Pipeline Engine",
+      "tech_reason": "DAG-based pipeline execution, retries, parallelism",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [
+        {
+          "target": "agent_pool",
+          "label": "Execute"
+        },
+        {
+          "target": "artifact_storage",
+          "label": "Store results"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "agent_pool",
+      "name": "Worker Agents",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Docker / K8s runners",
+      "icon": "server",
+      "core": true,
+      "stack_category": "Agents",
+      "tech_reason": "Ephemeral build/deploy agents with sandboxing",
+      "base_cost": {
+        "low": 100,
+        "high": 300
+      },
+      "connects_to": [
+        {
+          "target": "log_collector",
+          "label": "Logs"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 4,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "webhook_handler",
+      "name": "Webhook Handler",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Express",
+      "icon": "zap",
+      "core": true,
+      "base_cost": {
+        "low": 20,
+        "high": 50
+      },
+      "connects_to": [
+        {
+          "target": "pipeline_engine",
+          "label": "Trigger pipeline"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "log_collector",
+      "name": "Log Collector",
+      "category": "infrastructure",
+      "layer": "service",
+      "tech": "Fluentd / Vector",
+      "icon": "bar-chart",
+      "core": false,
+      "stack_category": "Logging",
+      "tech_reason": "Centralized log aggregation from agents and services",
+      "base_cost": {
+        "low": 40,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "log_storage",
+          "label": "Store"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "notification_service",
+      "name": "Notification Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Slack / Email / Discord",
+      "icon": "mail",
+      "core": false,
+      "base_cost": {
+        "low": 15,
+        "high": 40
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "Projects, users, pipeline configs, history",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "artifact_storage",
+      "name": "Artifact Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 / MinIO",
+      "icon": "hard-drive",
+      "core": false,
+      "stack_category": "Storage",
+      "tech_reason": "Build artifacts, container images, test reports",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 3,
+      "complexity_weight": 2,
+      "failure_blast_radius": "low",
+      "min_scale": "startup",
+      "dependencies": [
+        "object_storage"
+      ]
+    },
+    {
+      "id": "log_storage",
+      "name": "Log Storage",
+      "category": "database",
+      "layer": "data",
+      "tech": "Elasticsearch / Loki",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Log Storage",
+      "tech_reason": "Searchable log storage with retention policies",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    }
+  ]
+}

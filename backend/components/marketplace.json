@@ -1,0 +1,397 @@
+{
+  "domain": "marketplace",
+  "label": "Marketplace / E-Commerce",
+  "components": [
+    {
+      "id": "storefront",
+      "name": "Storefront / Web App",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "SSR for SEO, dynamic product pages",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "cdn",
+          "label": "Assets"
+        },
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "cdn",
+      "name": "CDN",
+      "category": "infrastructure",
+      "layer": "client",
+      "tech": "CloudFront",
+      "icon": "globe",
+      "core": false,
+      "base_cost": {
+        "low": 40,
+        "high": 100
+      },
+      "connects_to": [],
+      "scalability_score": 10,
+      "latency_impact": -20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "min_scale": "growth"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / Nginx",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Rate limiting, auth, routing",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "auth",
+          "label": "Verify"
+        },
+        {
+          "target": "catalog_service",
+          "label": "Products"
+        },
+        {
+          "target": "order_service",
+          "label": "Orders"
+        },
+        {
+          "target": "search_service",
+          "label": "Search"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "auth",
+      "name": "Auth Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "JWT / OAuth 2.0",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "Buyer + seller authentication, social login",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "connects_to": [
+        {
+          "target": "user_db",
+          "label": "Users"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "catalog_service",
+      "name": "Product Catalog",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Node.js",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Product CRUD, categories, variants, inventory",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "product_db",
+          "label": "Read/Write"
+        },
+        {
+          "target": "search_service",
+          "label": "Index"
+        },
+        {
+          "target": "media_storage",
+          "label": "Images"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 10,
+      "complexity_weight": 4,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "search_service",
+      "name": "Search Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Elasticsearch / Algolia",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Search",
+      "tech_reason": "Full-text search, faceted filters, autocomplete",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 7,
+      "latency_impact": 20,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "order_service",
+      "name": "Order Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI",
+      "icon": "cpu",
+      "core": false,
+      "stack_category": "Orders",
+      "tech_reason": "Order lifecycle, cart, checkout flow",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "payment_service",
+          "label": "Charge"
+        },
+        {
+          "target": "order_db",
+          "label": "Store"
+        },
+        {
+          "target": "notification_service",
+          "label": "Notify"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high",
+      "min_scale": "startup"
+    },
+    {
+      "id": "payment_service",
+      "name": "Payment Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Stripe / PayPal SDK",
+      "icon": "zap",
+      "core": false,
+      "stack_category": "Payments",
+      "tech_reason": "Split payments, escrow, refunds, multi-currency",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "order_db",
+          "label": "Transaction logs"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 12,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical",
+      "min_scale": "startup"
+    },
+    {
+      "id": "seller_dashboard",
+      "name": "Seller Dashboard",
+      "category": "backend",
+      "layer": "service",
+      "tech": "React + API",
+      "icon": "bar-chart",
+      "core": false,
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "catalog_service",
+          "label": "Manage"
+        },
+        {
+          "target": "order_service",
+          "label": "View orders"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "review_service",
+      "name": "Review & Ratings",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI",
+      "icon": "cpu",
+      "core": false,
+      "base_cost": {
+        "low": 20,
+        "high": 50
+      },
+      "connects_to": [
+        {
+          "target": "product_db",
+          "label": "Reviews"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "growth"
+    },
+    {
+      "id": "notification_service",
+      "name": "Notifications",
+      "category": "backend",
+      "layer": "service",
+      "tech": "SendGrid / Twilio",
+      "icon": "mail",
+      "core": false,
+      "base_cost": {
+        "low": 25,
+        "high": 60
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "cache",
+      "name": "Cache Layer",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Cache",
+      "tech_reason": "Product cache, session store, cart data",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [],
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "product_db",
+      "name": "Product Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "Product catalog, reviews, categories",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "order_db",
+      "name": "Order Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "user_db",
+      "name": "User Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "media_storage",
+      "name": "Media Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 / CloudFront",
+      "icon": "hard-drive",
+      "core": true,
+      "stack_category": "Storage",
+      "tech_reason": "Product images, seller assets",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 3,
+      "complexity_weight": 2,
+      "failure_blast_radius": "low"
+    }
+  ]
+}

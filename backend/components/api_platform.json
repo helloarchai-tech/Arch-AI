@@ -1,0 +1,421 @@
+{
+  "domain": "api_platform",
+  "label": "API Integration Platform",
+  "components": [
+    {
+      "id": "web_console",
+      "name": "Developer Console",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "Developer-friendly UI for API management",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "alternatives": [
+        "Vue + Nuxt",
+        "Angular"
+      ],
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        }
+      ]
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / AWS API GW",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Rate limiting, auth, request routing",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical",
+      "alternatives": [
+        "Traefik",
+        "Nginx + Lua"
+      ],
+      "connects_to": [
+        {
+          "target": "api_discovery",
+          "label": "Discover"
+        },
+        {
+          "target": "orchestrator",
+          "label": "Route"
+        },
+        {
+          "target": "auth_service",
+          "label": "Verify"
+        },
+        {
+          "target": "rate_limiter",
+          "label": "Check limits"
+        }
+      ]
+    },
+    {
+      "id": "auth_service",
+      "name": "Auth & API Keys",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "OAuth 2.0 / JWT",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "API key management, OAuth flows, JWT validation",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical",
+      "alternatives": [
+        "Auth0",
+        "Keycloak"
+      ],
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Credentials"
+        }
+      ]
+    },
+    {
+      "id": "rate_limiter",
+      "name": "Rate Limiter",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Redis + Lua",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Rate Limiting",
+      "tech_reason": "Token bucket algorithm, per-key quotas",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 9,
+      "latency_impact": 2,
+      "complexity_weight": 3,
+      "failure_blast_radius": "medium",
+      "alternatives": [
+        "AWS WAF",
+        "Cloudflare Rate Limiting"
+      ],
+      "connects_to": [
+        {
+          "target": "cache",
+          "label": "Counters"
+        }
+      ]
+    },
+    {
+      "id": "api_discovery",
+      "name": "API Discovery Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI + OpenAPI",
+      "icon": "cpu",
+      "core": false,
+      "stack_category": "Discovery",
+      "tech_reason": "Auto-discovers and catalogs available APIs",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "scalability_score": 7,
+      "latency_impact": 15,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium",
+      "alternatives": [
+        "Custom gRPC discovery"
+      ],
+      "connects_to": [
+        {
+          "target": "api_registry",
+          "label": "Catalog"
+        },
+        {
+          "target": "schema_mapper",
+          "label": "Map schemas"
+        }
+      ],
+      "min_scale": "startup"
+    },
+    {
+      "id": "orchestrator",
+      "name": "Integration Orchestrator",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Temporal / Step Functions",
+      "icon": "cpu",
+      "core": false,
+      "stack_category": "Orchestration",
+      "tech_reason": "Workflow orchestration for multi-step API integrations",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "scalability_score": 8,
+      "latency_impact": 20,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high",
+      "alternatives": [
+        "Apache Airflow",
+        "Prefect"
+      ],
+      "connects_to": [
+        {
+          "target": "connector_layer",
+          "label": "Execute"
+        },
+        {
+          "target": "webhook_manager",
+          "label": "Trigger"
+        },
+        {
+          "target": "message_queue",
+          "label": "Async jobs"
+        }
+      ],
+      "min_scale": "growth",
+      "dependencies": [
+        "message_queue"
+      ]
+    },
+    {
+      "id": "connector_layer",
+      "name": "API Connectors Layer",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Python / Node.js SDKs",
+      "icon": "server",
+      "core": false,
+      "stack_category": "Connectors",
+      "tech_reason": "Pre-built connectors for third-party APIs",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 7,
+      "latency_impact": 25,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium",
+      "alternatives": [
+        "Zapier Engine",
+        "Workato"
+      ],
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Logs"
+        },
+        {
+          "target": "monitoring",
+          "label": "Metrics",
+          "animated": true
+        }
+      ],
+      "min_scale": "startup"
+    },
+    {
+      "id": "schema_mapper",
+      "name": "Schema Mapper",
+      "category": "backend",
+      "layer": "service",
+      "tech": "JSONSchema / Avro",
+      "icon": "cpu",
+      "core": false,
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 6,
+      "latency_impact": 5,
+      "complexity_weight": 4,
+      "failure_blast_radius": "low",
+      "connects_to": [
+        {
+          "target": "api_registry",
+          "label": "Schemas"
+        }
+      ],
+      "min_scale": "growth"
+    },
+    {
+      "id": "webhook_manager",
+      "name": "Webhook Manager",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI + Celery",
+      "icon": "zap",
+      "core": false,
+      "stack_category": "Webhooks",
+      "tech_reason": "Reliable webhook delivery with retries and dead-letter queues",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 8,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "high",
+      "alternatives": [
+        "AWS EventBridge",
+        "Svix"
+      ],
+      "connects_to": [
+        {
+          "target": "message_queue",
+          "label": "Queue"
+        },
+        {
+          "target": "primary_db",
+          "label": "Webhook logs"
+        }
+      ],
+      "min_scale": "startup",
+      "dependencies": [
+        "message_queue"
+      ]
+    },
+    {
+      "id": "message_queue",
+      "name": "Message Queue",
+      "category": "infrastructure",
+      "layer": "service",
+      "tech": "RabbitMQ / SQS",
+      "icon": "mail",
+      "core": false,
+      "stack_category": "Message Queue",
+      "tech_reason": "Async processing, retry logic, dead-letter queues",
+      "base_cost": {
+        "low": 25,
+        "high": 75
+      },
+      "scalability_score": 9,
+      "latency_impact": 5,
+      "complexity_weight": 4,
+      "failure_blast_radius": "high",
+      "alternatives": [
+        "Apache Kafka",
+        "Redis Streams"
+      ],
+      "connects_to": [],
+      "min_scale": "startup",
+      "dependencies": []
+    },
+    {
+      "id": "api_registry",
+      "name": "API Registry / Catalog",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL + OpenAPI specs",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Registry",
+      "tech_reason": "Central catalog of all API definitions and versions",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 6,
+      "latency_impact": 8,
+      "complexity_weight": 3,
+      "failure_blast_radius": "medium",
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "monitoring",
+      "name": "API Monitoring & Analytics",
+      "category": "infrastructure",
+      "layer": "service",
+      "tech": "Grafana + Prometheus",
+      "icon": "bar-chart",
+      "core": false,
+      "stack_category": "Monitoring",
+      "tech_reason": "Real-time API health, latency tracking, usage analytics",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "cache",
+      "name": "Response Cache",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Cache",
+      "tech_reason": "API response caching, rate limit counters",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium",
+      "alternatives": [
+        "Memcached",
+        "Varnish"
+      ],
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "API keys, user data, integration configs, audit logs",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical",
+      "alternatives": [
+        "CockroachDB",
+        "AlloyDB"
+      ],
+      "connects_to": []
+    }
+  ]
+}

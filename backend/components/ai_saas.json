@@ -1,0 +1,439 @@
+{
+  "domain": "ai_saas",
+  "label": "AI / ML SaaS Platform",
+  "components": [
+    {
+      "id": "web_app",
+      "name": "Web Application",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "SSR, great DX, rich ecosystem for dashboards",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "connects_to": [
+        {
+          "target": "cdn",
+          "label": "Static assets"
+        },
+        {
+          "target": "load_balancer",
+          "label": "HTTPS"
+        }
+      ]
+    },
+    {
+      "id": "cdn",
+      "name": "CDN",
+      "category": "infrastructure",
+      "layer": "client",
+      "tech": "CloudFront / Fastly",
+      "icon": "globe",
+      "core": false,
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "scalability_score": 10,
+      "latency_impact": -20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "connects_to": [],
+      "min_scale": "growth"
+    },
+    {
+      "id": "load_balancer",
+      "name": "Load Balancer",
+      "category": "infrastructure",
+      "layer": "gateway",
+      "tech": "ALB / Nginx",
+      "icon": "server",
+      "core": false,
+      "stack_category": "Load Balancer",
+      "tech_reason": "Distribute traffic across API instances",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 10,
+      "latency_impact": 2,
+      "complexity_weight": 2,
+      "failure_blast_radius": "critical",
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "Route"
+        }
+      ],
+      "min_scale": "growth"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / FastAPI",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Auth, rate limiting, request routing",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 9,
+      "latency_impact": 8,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical",
+      "connects_to": [
+        {
+          "target": "auth_service",
+          "label": "Verify"
+        },
+        {
+          "target": "core_api",
+          "label": "Route"
+        },
+        {
+          "target": "ml_service",
+          "label": "ML API",
+          "animated": true
+        }
+      ]
+    },
+    {
+      "id": "auth_service",
+      "name": "Auth Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "JWT / OAuth 2.0",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "Stateless auth with JWT, OAuth for SSO",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical",
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Users"
+        }
+      ]
+    },
+    {
+      "id": "core_api",
+      "name": "Core API Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI (Python)",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "High-performance async API, auto-docs",
+      "base_cost": {
+        "low": 150,
+        "high": 300
+      },
+      "scalability_score": 7,
+      "latency_impact": 15,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high",
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Read/Write"
+        },
+        {
+          "target": "cache",
+          "label": "Cache"
+        },
+        {
+          "target": "queue",
+          "label": "Async jobs"
+        },
+        {
+          "target": "ml_service",
+          "label": "Inference",
+          "animated": true
+        }
+      ]
+    },
+    {
+      "id": "ml_service",
+      "name": "ML Inference Service",
+      "category": "ai",
+      "layer": "service",
+      "tech": "TensorFlow Serving / Triton",
+      "icon": "brain",
+      "core": false,
+      "stack_category": "AI/ML",
+      "tech_reason": "GPU-accelerated model serving with batching",
+      "base_cost": {
+        "low": 200,
+        "high": 500
+      },
+      "scalability_score": 5,
+      "latency_impact": 50,
+      "complexity_weight": 8,
+      "failure_blast_radius": "high",
+      "alternatives": [
+        "Replicate",
+        "AWS SageMaker Endpoint"
+      ],
+      "connects_to": [
+        {
+          "target": "model_registry",
+          "label": "Load model"
+        },
+        {
+          "target": "feature_store",
+          "label": "Features"
+        }
+      ],
+      "min_scale": "startup"
+    },
+    {
+      "id": "training_pipeline",
+      "name": "Training Pipeline",
+      "category": "ai",
+      "layer": "service",
+      "tech": "Kubeflow / SageMaker",
+      "icon": "brain",
+      "core": false,
+      "requires_features": [
+        "ml_ai"
+      ],
+      "base_cost": {
+        "low": 150,
+        "high": 400
+      },
+      "scalability_score": 6,
+      "latency_impact": 0,
+      "complexity_weight": 9,
+      "failure_blast_radius": "medium",
+      "connects_to": [
+        {
+          "target": "model_registry",
+          "label": "Publish model"
+        },
+        {
+          "target": "object_storage",
+          "label": "Training data"
+        }
+      ],
+      "min_scale": "growth",
+      "dependencies": [
+        "model_registry",
+        "object_storage"
+      ]
+    },
+    {
+      "id": "model_registry",
+      "name": "Model Registry",
+      "category": "ai",
+      "layer": "data",
+      "tech": "MLflow / W&B",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Model Registry",
+      "tech_reason": "Version control for ML models, A/B testing support",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "scalability_score": 7,
+      "latency_impact": 5,
+      "complexity_weight": 4,
+      "failure_blast_radius": "medium",
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "feature_store",
+      "name": "Feature Store",
+      "category": "ai",
+      "layer": "data",
+      "tech": "Feast / Tecton",
+      "icon": "database",
+      "core": false,
+      "requires_features": [
+        "ml_ai"
+      ],
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "scalability_score": 7,
+      "latency_impact": 10,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium",
+      "connects_to": [],
+      "min_scale": "growth",
+      "dependencies": [
+        "primary_db"
+      ]
+    },
+    {
+      "id": "queue",
+      "name": "Message Queue",
+      "category": "infrastructure",
+      "layer": "service",
+      "tech": "RabbitMQ / SQS",
+      "icon": "mail",
+      "core": false,
+      "stack_category": "Queue",
+      "tech_reason": "Async job processing, model training triggers",
+      "base_cost": {
+        "low": 25,
+        "high": 75
+      },
+      "scalability_score": 9,
+      "latency_impact": 5,
+      "complexity_weight": 4,
+      "failure_blast_radius": "high",
+      "connects_to": [
+        {
+          "target": "workers",
+          "label": "Consume"
+        }
+      ],
+      "min_scale": "startup"
+    },
+    {
+      "id": "workers",
+      "name": "Background Workers",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Celery / Bull",
+      "icon": "zap",
+      "core": false,
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 4,
+      "failure_blast_radius": "medium",
+      "connects_to": [
+        {
+          "target": "object_storage",
+          "label": "Files"
+        },
+        {
+          "target": "primary_db",
+          "label": "Results"
+        }
+      ],
+      "min_scale": "startup",
+      "dependencies": [
+        "message_queue",
+        "queue"
+      ]
+    },
+    {
+      "id": "cache",
+      "name": "Cache Layer",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Cache",
+      "tech_reason": "In-memory caching, session store, rate limits",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium",
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "ACID compliance, JSON support, mature tooling",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical",
+      "connects_to": []
+    },
+    {
+      "id": "object_storage",
+      "name": "Object Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 / GCS",
+      "icon": "hard-drive",
+      "core": false,
+      "stack_category": "Storage",
+      "tech_reason": "Model artifacts, training data, user uploads",
+      "base_cost": {
+        "low": 25,
+        "high": 80
+      },
+      "scalability_score": 10,
+      "latency_impact": 20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "connects_to": [],
+      "min_scale": "startup"
+    },
+    {
+      "id": "monitoring",
+      "name": "Monitoring",
+      "category": "infrastructure",
+      "layer": "service",
+      "tech": "Grafana + Prometheus",
+      "icon": "bar-chart",
+      "core": false,
+      "stack_category": "Monitoring",
+      "tech_reason": "ML model performance, API metrics, alerts",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "connects_to": [
+        {
+          "target": "core_api",
+          "label": "Metrics",
+          "animated": true
+        }
+      ],
+      "min_scale": "startup"
+    }
+  ]
+}

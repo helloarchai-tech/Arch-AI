@@ -1,0 +1,402 @@
+{
+  "domain": "social_platform",
+  "label": "Social / Community Platform",
+  "components": [
+    {
+      "id": "web_app",
+      "name": "Web Application",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "SSR for SEO, infinite scroll, real-time updates",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "cdn",
+          "label": "Media"
+        },
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        },
+        {
+          "target": "realtime_server",
+          "label": "WebSocket"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "cdn",
+      "name": "CDN",
+      "category": "infrastructure",
+      "layer": "client",
+      "tech": "CloudFront / Fastly",
+      "icon": "globe",
+      "core": false,
+      "base_cost": {
+        "low": 40,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 10,
+      "latency_impact": -20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "min_scale": "growth"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / Nginx",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Rate limiting, auth, request routing",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "auth_service",
+          "label": "Verify"
+        },
+        {
+          "target": "feed_service",
+          "label": "Feed"
+        },
+        {
+          "target": "user_service",
+          "label": "Profiles"
+        },
+        {
+          "target": "content_service",
+          "label": "Posts"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "auth_service",
+      "name": "Auth Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "OAuth 2.0 / Social Login",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "Social login (Google, Apple), phone auth",
+      "base_cost": {
+        "low": 25,
+        "high": 50
+      },
+      "connects_to": [
+        {
+          "target": "user_db",
+          "label": "Users"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "feed_service",
+      "name": "Feed Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI + Redis",
+      "icon": "cpu",
+      "core": false,
+      "stack_category": "Feed",
+      "tech_reason": "Fan-out feed generation, timeline ranking",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [
+        {
+          "target": "feed_cache",
+          "label": "Cached feeds"
+        },
+        {
+          "target": "content_db",
+          "label": "Content"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 20,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high",
+      "min_scale": "startup",
+      "dependencies": [
+        "cache",
+        "primary_db"
+      ]
+    },
+    {
+      "id": "user_service",
+      "name": "User / Profile Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Profiles, followers, connections, settings",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "user_db",
+          "label": "Read/Write"
+        },
+        {
+          "target": "graph_db",
+          "label": "Social graph"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "content_service",
+      "name": "Content Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Node.js",
+      "icon": "cpu",
+      "core": true,
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "content_db",
+          "label": "CRUD"
+        },
+        {
+          "target": "media_pipeline",
+          "label": "Media"
+        },
+        {
+          "target": "moderation",
+          "label": "Check",
+          "animated": true
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "realtime_server",
+      "name": "Real-time Server",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Socket.io / Agora",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Real-time",
+      "tech_reason": "WebSocket for live updates, typing indicators, presence",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "feed_cache",
+          "label": "Pub/Sub"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 5,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "media_pipeline",
+      "name": "Media Pipeline",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FFmpeg / Cloudinary",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Media",
+      "tech_reason": "Image resizing, video transcoding, thumbnails",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "media_storage",
+          "label": "Store"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "moderation",
+      "name": "Content Moderation",
+      "category": "ai",
+      "layer": "service",
+      "tech": "AWS Rekognition / Custom ML",
+      "icon": "brain",
+      "core": false,
+      "stack_category": "Moderation",
+      "tech_reason": "Automated NSFW detection, spam filtering",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 6,
+      "latency_impact": 25,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "notification_service",
+      "name": "Notification Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FCM / APNs / SNS",
+      "icon": "mail",
+      "core": false,
+      "base_cost": {
+        "low": 25,
+        "high": 60
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low",
+      "min_scale": "startup"
+    },
+    {
+      "id": "feed_cache",
+      "name": "Feed Cache",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis Cluster",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Cache",
+      "tech_reason": "Pre-computed feeds, counters, online presence",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "user_db",
+      "name": "User Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "User profiles, settings, credentials",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "content_db",
+      "name": "Content Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL / MongoDB",
+      "icon": "database",
+      "core": true,
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "graph_db",
+      "name": "Social Graph DB",
+      "category": "database",
+      "layer": "data",
+      "tech": "Neo4j / DGraph",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Graph DB",
+      "tech_reason": "Follower relationships, friend suggestions, mutual connections",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 15,
+      "complexity_weight": 7,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "media_storage",
+      "name": "Media Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 + CloudFront",
+      "icon": "hard-drive",
+      "core": true,
+      "stack_category": "Storage",
+      "tech_reason": "User photos, videos, attachments",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 3,
+      "complexity_weight": 2,
+      "failure_blast_radius": "low"
+    }
+  ]
+}

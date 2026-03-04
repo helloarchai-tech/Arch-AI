@@ -1,0 +1,323 @@
+{
+  "domain": "rag_system",
+  "label": "RAG / AI Knowledge System",
+  "components": [
+    {
+      "id": "chat_ui",
+      "name": "Chat Interface",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React / Next.js",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "Streaming chat UI with markdown rendering",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "api_server",
+          "label": "HTTPS / WebSocket"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "admin_panel",
+      "name": "Admin / Upload Portal",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React",
+      "icon": "monitor",
+      "core": false,
+      "base_cost": {
+        "low": 20,
+        "high": 50
+      },
+      "connects_to": [
+        {
+          "target": "api_server",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "api_server",
+      "name": "API Server",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "FastAPI (Python)",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Async API with streaming support for LLM responses",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "retrieval_pipeline",
+          "label": "Query"
+        },
+        {
+          "target": "auth",
+          "label": "Verify"
+        },
+        {
+          "target": "primary_db",
+          "label": "User data"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "auth",
+      "name": "Auth Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "JWT / API Keys",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "API key management for programmatic access",
+      "base_cost": {
+        "low": 15,
+        "high": 30
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "retrieval_pipeline",
+      "name": "Retrieval Pipeline",
+      "category": "ai",
+      "layer": "service",
+      "tech": "LangChain / LlamaIndex",
+      "icon": "brain",
+      "core": false,
+      "stack_category": "RAG Framework",
+      "tech_reason": "Orchestrates retrieval, re-ranking, and LLM calls",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "embedding_service",
+          "label": "Embed query"
+        },
+        {
+          "target": "vector_db",
+          "label": "Similarity search",
+          "animated": true
+        },
+        {
+          "target": "llm_gateway",
+          "label": "Generate answer",
+          "animated": true
+        },
+        {
+          "target": "reranker",
+          "label": "Re-rank results"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "embedding_service",
+      "name": "Embedding Service",
+      "category": "ai",
+      "layer": "service",
+      "tech": "OpenAI / Sentence Transformers",
+      "icon": "brain",
+      "core": false,
+      "stack_category": "Embedding",
+      "tech_reason": "Convert text to dense vector representations",
+      "base_cost": {
+        "low": 50,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 6,
+      "latency_impact": 30,
+      "complexity_weight": 7,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "llm_gateway",
+      "name": "LLM Gateway",
+      "category": "ai",
+      "layer": "service",
+      "tech": "OpenAI / Anthropic / Ollama",
+      "icon": "brain",
+      "core": true,
+      "stack_category": "LLM",
+      "tech_reason": "Abstraction layer for multiple LLM providers",
+      "base_cost": {
+        "low": 100,
+        "high": 500
+      },
+      "connects_to": [],
+      "scalability_score": 4,
+      "latency_impact": 40,
+      "complexity_weight": 8,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "reranker",
+      "name": "Re-Ranker",
+      "category": "ai",
+      "layer": "service",
+      "tech": "Cohere Rerank / Cross-encoder",
+      "icon": "cpu",
+      "core": false,
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 4,
+      "latency_impact": 40,
+      "complexity_weight": 8,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "doc_processor",
+      "name": "Document Processor",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Unstructured.io / PyPDF",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Doc Processing",
+      "tech_reason": "Parse PDFs, HTML, DOCX into clean text chunks",
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "chunker",
+          "label": "Parse \u00e2\u2020\u2019 chunk"
+        },
+        {
+          "target": "object_storage",
+          "label": "Source files"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "chunker",
+      "name": "Text Chunker",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Custom / LangChain",
+      "icon": "cpu",
+      "core": true,
+      "base_cost": {
+        "low": 10,
+        "high": 25
+      },
+      "connects_to": [
+        {
+          "target": "embedding_service",
+          "label": "Embed chunks"
+        },
+        {
+          "target": "vector_db",
+          "label": "Store vectors"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "vector_db",
+      "name": "Vector Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "Pinecone / Weaviate / Chroma",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Vector DB",
+      "tech_reason": "High-performance similarity search on document embeddings",
+      "base_cost": {
+        "low": 70,
+        "high": 200
+      },
+      "connects_to": [],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "User data, chat history, document metadata",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "object_storage",
+      "name": "Document Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 / GCS",
+      "icon": "hard-drive",
+      "core": false,
+      "stack_category": "Storage",
+      "tech_reason": "Store original documents (PDFs, DOCX, HTML)",
+      "base_cost": {
+        "low": 20,
+        "high": 60
+      },
+      "connects_to": [],
+      "scalability_score": 7,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    }
+  ]
+}

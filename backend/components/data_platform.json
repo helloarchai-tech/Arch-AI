@@ -1,0 +1,310 @@
+{
+  "domain": "data_platform",
+  "label": "Data / Analytics Platform",
+  "components": [
+    {
+      "id": "dashboard",
+      "name": "Analytics Dashboard",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React + D3.js / Superset",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Frontend",
+      "tech_reason": "Interactive charts, drill-down, custom dashboards",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "query_engine",
+          "label": "HTTPS"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / Nginx",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Auth, rate limiting, API versioning",
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "query_engine",
+          "label": "Route"
+        },
+        {
+          "target": "ingestion_api",
+          "label": "Ingest"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "ingestion_api",
+      "name": "Data Ingestion API",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Kafka Connect",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Ingestion",
+      "tech_reason": "REST + streaming ingestion from multiple sources",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [
+        {
+          "target": "stream_processor",
+          "label": "Stream"
+        },
+        {
+          "target": "data_lake",
+          "label": "Raw store"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "stream_processor",
+      "name": "Stream Processor",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Apache Kafka / Flink",
+      "icon": "zap",
+      "core": false,
+      "stack_category": "Stream Processing",
+      "tech_reason": "Real-time data transformation and enrichment",
+      "base_cost": {
+        "low": 100,
+        "high": 300
+      },
+      "connects_to": [
+        {
+          "target": "data_warehouse",
+          "label": "Load"
+        },
+        {
+          "target": "data_lake",
+          "label": "Archive"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high",
+      "min_scale": "growth",
+      "dependencies": [
+        "message_queue"
+      ]
+    },
+    {
+      "id": "etl_service",
+      "name": "ETL / dbt Pipeline",
+      "category": "backend",
+      "layer": "service",
+      "tech": "dbt / Airflow",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "ETL",
+      "tech_reason": "SQL-based transformations, scheduled pipelines, lineage",
+      "base_cost": {
+        "low": 75,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "data_warehouse",
+          "label": "Transform"
+        },
+        {
+          "target": "data_catalog",
+          "label": "Register"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 0,
+      "complexity_weight": 6,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "query_engine",
+      "name": "Query Engine",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Trino / Presto",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Query Engine",
+      "tech_reason": "Federated queries across warehouse and lake",
+      "base_cost": {
+        "low": 100,
+        "high": 250
+      },
+      "connects_to": [
+        {
+          "target": "data_warehouse",
+          "label": "Query"
+        },
+        {
+          "target": "cache",
+          "label": "Cache results"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "data_catalog",
+      "name": "Data Catalog",
+      "category": "backend",
+      "layer": "service",
+      "tech": "DataHub / Amundsen",
+      "icon": "server",
+      "core": false,
+      "stack_category": "Catalog",
+      "tech_reason": "Data discovery, lineage tracking, documentation",
+      "base_cost": {
+        "low": 40,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "metadata_db",
+          "label": "Metadata"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "scheduler",
+      "name": "Workflow Scheduler",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Apache Airflow / Dagster",
+      "icon": "zap",
+      "core": true,
+      "stack_category": "Scheduler",
+      "tech_reason": "Orchestrate ETL pipelines, retries, dependencies",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "etl_service",
+          "label": "Trigger"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "data_warehouse",
+      "name": "Data Warehouse",
+      "category": "database",
+      "layer": "data",
+      "tech": "Snowflake / BigQuery",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Warehouse",
+      "tech_reason": "Columnar storage, massively parallel queries",
+      "base_cost": {
+        "low": 200,
+        "high": 600
+      },
+      "connects_to": [],
+      "scalability_score": 7,
+      "latency_impact": 20,
+      "complexity_weight": 6,
+      "failure_blast_radius": "high",
+      "min_scale": "growth"
+    },
+    {
+      "id": "data_lake",
+      "name": "Data Lake",
+      "category": "database",
+      "layer": "data",
+      "tech": "S3 + Delta Lake / Iceberg",
+      "icon": "hard-drive",
+      "core": true,
+      "stack_category": "Data Lake",
+      "tech_reason": "Raw data storage in open table formats",
+      "base_cost": {
+        "low": 50,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "cache",
+      "name": "Query Cache",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis",
+      "icon": "database",
+      "core": false,
+      "base_cost": {
+        "low": 30,
+        "high": 60
+      },
+      "connects_to": [],
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "metadata_db",
+      "name": "Metadata Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "Pipeline metadata, user permissions, catalog data",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    }
+  ]
+}

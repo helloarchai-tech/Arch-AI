@@ -1,0 +1,316 @@
+{
+  "domain": "mobile_app",
+  "label": "Mobile App Backend",
+  "components": [
+    {
+      "id": "mobile_client",
+      "name": "Mobile App",
+      "category": "frontend",
+      "layer": "client",
+      "tech": "React Native / Flutter",
+      "icon": "monitor",
+      "core": true,
+      "stack_category": "Mobile",
+      "tech_reason": "Cross-platform with native performance",
+      "base_cost": {
+        "low": 0,
+        "high": 0
+      },
+      "connects_to": [
+        {
+          "target": "api_gateway",
+          "label": "HTTPS"
+        },
+        {
+          "target": "cdn",
+          "label": "Media"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "cdn",
+      "name": "CDN",
+      "category": "infrastructure",
+      "layer": "client",
+      "tech": "CloudFront / Fastly",
+      "icon": "globe",
+      "core": false,
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 10,
+      "latency_impact": -20,
+      "complexity_weight": 1,
+      "failure_blast_radius": "low",
+      "min_scale": "growth"
+    },
+    {
+      "id": "api_gateway",
+      "name": "API Gateway",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Kong / AWS API GW",
+      "icon": "shield",
+      "core": true,
+      "stack_category": "Gateway",
+      "tech_reason": "Rate limiting, auth, versioned API routing",
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "auth_service",
+          "label": "Verify"
+        },
+        {
+          "target": "core_api",
+          "label": "Route"
+        },
+        {
+          "target": "realtime_service",
+          "label": "WebSocket"
+        }
+      ],
+      "scalability_score": 9,
+      "latency_impact": 10,
+      "complexity_weight": 5,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "auth_service",
+      "name": "Auth Service",
+      "category": "backend",
+      "layer": "gateway",
+      "tech": "Firebase Auth / Auth0",
+      "icon": "lock",
+      "core": true,
+      "stack_category": "Auth",
+      "tech_reason": "Social login, phone auth, biometric",
+      "base_cost": {
+        "low": 25,
+        "high": 60
+      },
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Users"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 8,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "core_api",
+      "name": "Core API",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FastAPI / Express",
+      "icon": "cpu",
+      "core": true,
+      "stack_category": "Backend",
+      "tech_reason": "Main business logic, CRUD operations",
+      "base_cost": {
+        "low": 100,
+        "high": 200
+      },
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Read/Write"
+        },
+        {
+          "target": "cache",
+          "label": "Cache"
+        },
+        {
+          "target": "push_service",
+          "label": "Trigger"
+        },
+        {
+          "target": "media_processor",
+          "label": "Upload"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "realtime_service",
+      "name": "Real-time Service",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Socket.io / Firebase RTDB",
+      "icon": "zap",
+      "core": false,
+      "requires_features": [
+        "real_time"
+      ],
+      "stack_category": "Real-time",
+      "tech_reason": "WebSocket connections for live updates, chat, presence",
+      "base_cost": {
+        "low": 50,
+        "high": 120
+      },
+      "connects_to": [
+        {
+          "target": "cache",
+          "label": "Pub/Sub"
+        }
+      ],
+      "scalability_score": 7,
+      "latency_impact": 5,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium"
+    },
+    {
+      "id": "push_service",
+      "name": "Push Notifications",
+      "category": "backend",
+      "layer": "service",
+      "tech": "FCM / APNs",
+      "icon": "mail",
+      "core": true,
+      "stack_category": "Push",
+      "tech_reason": "Reliable push delivery to iOS and Android",
+      "base_cost": {
+        "low": 20,
+        "high": 50
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 5,
+      "complexity_weight": 3,
+      "failure_blast_radius": "low"
+    },
+    {
+      "id": "media_processor",
+      "name": "Media Processor",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Sharp / FFmpeg",
+      "icon": "cpu",
+      "core": false,
+      "requires_features": [
+        "file_storage"
+      ],
+      "base_cost": {
+        "low": 30,
+        "high": 80
+      },
+      "connects_to": [
+        {
+          "target": "media_storage",
+          "label": "Store"
+        }
+      ],
+      "scalability_score": 6,
+      "latency_impact": 15,
+      "complexity_weight": 5,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup",
+      "dependencies": [
+        "object_storage"
+      ]
+    },
+    {
+      "id": "background_workers",
+      "name": "Background Workers",
+      "category": "backend",
+      "layer": "service",
+      "tech": "Celery / BullMQ",
+      "icon": "zap",
+      "core": false,
+      "base_cost": {
+        "low": 50,
+        "high": 100
+      },
+      "connects_to": [
+        {
+          "target": "primary_db",
+          "label": "Process"
+        }
+      ],
+      "scalability_score": 8,
+      "latency_impact": 0,
+      "complexity_weight": 4,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup",
+      "dependencies": [
+        "message_queue",
+        "queue"
+      ]
+    },
+    {
+      "id": "cache",
+      "name": "Cache / Session Store",
+      "category": "database",
+      "layer": "data",
+      "tech": "Redis",
+      "icon": "database",
+      "core": false,
+      "stack_category": "Cache",
+      "tech_reason": "Session data, real-time pub/sub, rate limits",
+      "base_cost": {
+        "low": 40,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 9,
+      "latency_impact": -15,
+      "complexity_weight": 2,
+      "failure_blast_radius": "medium",
+      "min_scale": "startup"
+    },
+    {
+      "id": "primary_db",
+      "name": "Primary Database",
+      "category": "database",
+      "layer": "data",
+      "tech": "PostgreSQL",
+      "icon": "database",
+      "core": true,
+      "stack_category": "Database",
+      "tech_reason": "User data, content, app state",
+      "base_cost": {
+        "low": 75,
+        "high": 150
+      },
+      "connects_to": [],
+      "scalability_score": 5,
+      "latency_impact": 12,
+      "complexity_weight": 4,
+      "failure_blast_radius": "critical"
+    },
+    {
+      "id": "media_storage",
+      "name": "Media Storage",
+      "category": "infrastructure",
+      "layer": "data",
+      "tech": "S3 + CloudFront",
+      "icon": "hard-drive",
+      "core": true,
+      "stack_category": "Storage",
+      "tech_reason": "User uploads, profile images, media files",
+      "base_cost": {
+        "low": 25,
+        "high": 80
+      },
+      "connects_to": [],
+      "scalability_score": 8,
+      "latency_impact": 3,
+      "complexity_weight": 2,
+      "failure_blast_radius": "low"
+    }
+  ]
+}
