@@ -27,8 +27,10 @@ interface TechStackItem {
 interface ArchitectureResponse {
   title?: string;
   summary?: string;
-  nodes?: Array<Record<string, unknown>>;
-  edges?: Array<Record<string, unknown>>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  nodes?: any[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  edges?: any[];
   techStack?: TechStackItem[];
 }
 
@@ -343,7 +345,7 @@ export default function WorkspacePage() {
               )}
             </div>
           </div>
-          <ExportControls architecture={architecture} />
+          <ExportControls architecture={architecture ?? undefined} />
         </div>
       </header>
 
@@ -556,8 +558,8 @@ export default function WorkspacePage() {
           {architecture?.nodes?.length ? (
             <div style={{ width: "100%", height: "100%" }}>
               <ArchitectureCanvas
-                nodes={architecture.nodes}
-                edges={architecture.edges}
+                nodes={architecture.nodes || []}
+                edges={architecture.edges || []}
                 onSelectNode={setSelectedNode}
               />
               <NodeIntelligencePanel node={selectedNode} onClose={() => setSelectedNode(null)} />
