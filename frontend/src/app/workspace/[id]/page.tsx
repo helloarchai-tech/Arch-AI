@@ -8,7 +8,7 @@ import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
 import NodeIntelligencePanel from "@/components/NodeIntelligencePanel";
 
-const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://34.135.222.94:8000/api";
+const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
 const API = RAW_API.replace(/^http:\/\//i, "https://");
 const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
 
