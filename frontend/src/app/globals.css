@@ -111,10 +111,12 @@ body {
 }
 
 @keyframes pulseNeon {
+
   0%,
   100% {
     opacity: 0.65;
   }
+
   50% {
     opacity: 1;
   }
@@ -124,6 +126,7 @@ body {
   0% {
     background-position: -220% 0;
   }
+
   100% {
     background-position: 220% 0;
   }
@@ -144,4 +147,21 @@ nextjs-portal,
 #nextjs-dev-tools-menu,
 #__next-build-watcher {
   display: none !important;
+}
+
+/* Hide scrollbar but keep scroll */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Touch-friendly tap targets on mobile */
+@media (max-width: 640px) {
+  button {
+    -webkit-tap-highlight-color: transparent;
+  }
 }

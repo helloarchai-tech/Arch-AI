@@ -51,7 +51,7 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden px-4 pb-10 pt-8 sm:px-8">
+    <div className="relative min-h-screen overflow-hidden px-4 pb-10 pt-6 sm:px-8">
       <NeuralBackdrop />
 
       <header className="relative z-10 mx-auto flex w-full max-w-7xl items-center justify-between">
@@ -69,7 +69,7 @@ export default function LandingPage() {
         </button>
       </header>
 
-      <main className="relative z-10 mx-auto mt-14 grid w-full max-w-7xl gap-8 lg:grid-cols-[1.05fr_1fr]">
+      <main className="relative z-10 mx-auto mt-8 grid w-full max-w-7xl gap-8 sm:mt-14 lg:grid-cols-[1.05fr_1fr]">
         <section>
           <motion.p
             initial={{ opacity: 0, y: 10 }}
@@ -84,7 +84,7 @@ export default function LandingPage() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="max-w-2xl text-5xl font-black leading-[1.05] tracking-tight sm:text-6xl"
+            className="max-w-2xl text-4xl font-black leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl"
           >
             <span className="neon-gradient-text">Design Production-Grade</span>
             <br />
@@ -114,12 +114,12 @@ export default function LandingPage() {
               placeholder='Example: "Build a smart irrigation assistant with voice UX, IoT devices, multilingual support, and analytics..."'
               className="h-36 w-full resize-none rounded-xl border border-cyan-300/35 bg-slate-950/85 p-4 text-sm text-slate-100 outline-none transition focus:border-cyan-200 focus:shadow-[0_0_28px_rgba(0,245,255,0.35)]"
             />
-            <div className="mt-3 flex flex-wrap items-center gap-2">
+            <div className="mt-3 flex items-center gap-2 overflow-x-auto pb-1 scrollbar-hide">
               {HINTS.map((hint) => (
                 <button
                   key={hint}
                   onClick={() => setPrompt(hint)}
-                  className="rounded-full border border-slate-500/35 bg-slate-900/65 px-3 py-1.5 text-xs text-slate-300 transition hover:border-cyan-300/50 hover:text-cyan-200"
+                  className="flex-shrink-0 rounded-full border border-slate-500/35 bg-slate-900/65 px-3 py-1.5 text-xs text-slate-300 transition hover:border-cyan-300/50 hover:text-cyan-200"
                 >
                   {hint}
                 </button>
@@ -135,7 +135,7 @@ export default function LandingPage() {
           </motion.div>
         </section>
 
-        <section className="relative">
+        <section className="relative mt-2 lg:mt-0">
           <motion.div
             initial={{ opacity: 0, scale: 0.98, y: 10 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -148,9 +148,11 @@ export default function LandingPage() {
               based on your prompt
             </div>
           </motion.div>
-          <LandingArchitecturePreview prompt={typePreview} />
+          <div className="min-h-[240px] sm:min-h-[300px]">
+            <LandingArchitecturePreview prompt={typePreview} />
+          </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-3">
+          <div className="mt-6 grid gap-3 grid-cols-3">
             <LandingListCard title="Recent" items={RECENT} />
             <LandingListCard title="Saved Projects" items={SAVED} />
             <LandingListCard title="Templates" items={TEMPLATES} />

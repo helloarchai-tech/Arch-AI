@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, BrainCircuit, Sparkles } from "lucide-react";
+import { ArrowLeft, BrainCircuit, Sparkles, Menu, X, ChevronDown } from "lucide-react";
 import type { Node } from "reactflow";
 import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
@@ -46,6 +46,7 @@ export default function WorkspacePage() {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [stackOpen, setStackOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const stackCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const techStack = useMemo(() => architecture?.techStack || [], [architecture]);
@@ -188,21 +189,23 @@ export default function WorkspacePage() {
         overflow: "hidden",
       }}
     >
+      {/* ── Header ── */}
       <header
         style={{
-          height: "68px",
-          minHeight: "68px",
+          height: "60px",
+          minHeight: "60px",
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "0 22px",
+          padding: "0 14px",
           borderBottom: "1px solid rgba(15,23,42,0.09)",
           background: "rgba(255,255,255,0.85)",
           backdropFilter: "blur(12px)",
           zIndex: 20,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        {/* Left: back + logo + title */}
+        <div style={{ display: "flex", alignItems: "center", gap: "10px", minWidth: 0, flex: 1 }}>
           <button
             onClick={() => router.push("/")}
             style={{
@@ -211,29 +214,30 @@ export default function WorkspacePage() {
               border: "none",
               cursor: "pointer",
               display: "flex",
+              flexShrink: 0,
             }}
           >
             <ArrowLeft size={18} />
           </button>
           <div
             style={{
-              width: "32px",
-              height: "32px",
+              width: "28px",
+              height: "28px",
               borderRadius: "8px",
               background: "linear-gradient(135deg, #0058d9, #0f9d8a)",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
+              flexShrink: 0,
             }}
           >
-            <BrainCircuit size={16} color="white" />
+            <BrainCircuit size={14} color="white" />
           </div>
           <span
             style={{
-              fontSize: "15px",
+              fontSize: "14px",
               fontWeight: 700,
               color: "#0f172a",
-              maxWidth: "560px",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
               overflow: "hidden",
@@ -244,22 +248,26 @@ export default function WorkspacePage() {
           </span>
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+        {/* Right: desktop controls */}
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", flexShrink: 0 }}>
+          {/* Tech Stack — hidden on mobile, shown on sm+ */}
           <div
+            className="hidden-mobile"
             style={{ position: "relative", paddingBottom: "6px", marginBottom: "-6px" }}
             onMouseEnter={openStack}
             onMouseLeave={closeStack}
           >
             <button
               style={{
-                padding: "9px 14px",
+                padding: "7px 12px",
                 borderRadius: "11px",
                 border: "1px solid #bcd0ea",
                 background: "white",
                 color: "#0f172a",
-                fontSize: "12px",
+                fontSize: "11px",
                 fontWeight: 800,
                 boxShadow: "0 6px 18px rgba(15,23,42,0.08)",
+                cursor: "pointer",
               }}
             >
               Tech Stack
@@ -269,8 +277,8 @@ export default function WorkspacePage() {
                 position: "absolute",
                 top: "calc(100% + 6px)",
                 right: 0,
-                width: "360px",
-                maxHeight: "420px",
+                width: "320px",
+                maxHeight: "400px",
                 overflowY: "auto",
                 borderRadius: "12px",
                 background: "white",
@@ -285,76 +293,38 @@ export default function WorkspacePage() {
               onMouseEnter={openStack}
               onMouseLeave={closeStack}
             >
-              <div
-                style={{
-                  fontSize: "13px",
-                  color: "#0f172a",
-                  fontWeight: 700,
-                  marginBottom: "10px",
-                }}
-              >
-                Tech Stack
-              </div>
-              {techStack.length ? (
-                techStack.map((tech: TechStackItem, i: number) => (
-                  <div
-                    key={`${tech.name || tech.technology}-${i}`}
-                    style={{
-                      padding: "10px",
-                      borderRadius: "10px",
-                      border: "1px solid #e2e8f0",
-                      marginBottom: "8px",
-                      background: "#f8fafc",
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        gap: "8px",
-                        alignItems: "center",
-                      }}
-                    >
-                      <span style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>
-                        {tech.name || tech.technology || "Technology"}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: "10px",
-                          fontWeight: 700,
-                          color: "#0b61d8",
-                          textTransform: "uppercase",
-                        }}
-                      >
-                        {tech.category || "general"}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        marginTop: "4px",
-                        fontSize: "11px",
-                        color: "#475569",
-                        lineHeight: 1.45,
-                      }}
-                    >
-                      {tech.reason || ""}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div style={{ fontSize: "12px", color: "#64748b" }}>No stack details yet.</div>
-              )}
+              <TechStackPopover techStack={techStack} />
             </div>
           </div>
+
           <ExportControls architecture={architecture ?? undefined} />
+
+          {/* Mobile menu toggle */}
+          <button
+            className="show-mobile"
+            onClick={() => setMobileSidebarOpen((v) => !v)}
+            style={{
+              padding: "8px",
+              borderRadius: "10px",
+              border: "1px solid #bcd0ea",
+              background: "white",
+              color: "#0f172a",
+              cursor: "pointer",
+              display: "none",
+            }}
+          >
+            {mobileSidebarOpen ? <X size={16} /> : <Menu size={16} />}
+          </button>
         </div>
       </header>
 
+      {/* ── Body ── */}
       <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
+
+        {/* Sidebar — hidden on mobile by default, shown when mobileSidebarOpen */}
         <div
+          className={`workspace-sidebar ${mobileSidebarOpen ? "sidebar-open" : ""}`}
           style={{
-            width: "360px",
-            minWidth: "360px",
             borderRight: "1px solid rgba(15,23,42,0.1)",
             display: "flex",
             flexDirection: "column",
@@ -362,6 +332,7 @@ export default function WorkspacePage() {
             backdropFilter: "blur(8px)",
           }}
         >
+          {/* Sidebar header */}
           <div
             style={{
               padding: "12px 16px",
@@ -397,8 +368,29 @@ export default function WorkspacePage() {
             >
               {state === "generating" ? "Generating..." : state === "error" ? "Error" : "Ready"}
             </span>
+            {/* Close button on mobile */}
+            <button
+              className="show-mobile"
+              onClick={() => setMobileSidebarOpen(false)}
+              style={{ background: "none", border: "none", cursor: "pointer", color: "#64748b", display: "none" }}
+            >
+              <X size={16} />
+            </button>
           </div>
 
+          {/* Tech stack (mobile only — inside sidebar) */}
+          <div className="show-mobile mobile-tech-stack" style={{ display: "none" }}>
+            <details style={{ padding: "12px 16px", borderBottom: "1px solid #eef2f7" }}>
+              <summary style={{ fontSize: "11px", fontWeight: 700, color: "#0b61d8", cursor: "pointer", listStyle: "none", display: "flex", alignItems: "center", gap: "6px" }}>
+                Tech Stack <ChevronDown size={12} />
+              </summary>
+              <div style={{ marginTop: "10px" }}>
+                <TechStackPopover techStack={techStack} />
+              </div>
+            </details>
+          </div>
+
+          {/* Prompt box */}
           <div
             style={{
               margin: "14px 16px 0",
@@ -425,6 +417,7 @@ export default function WorkspacePage() {
             </div>
           </div>
 
+          {/* Chat messages */}
           <div
             style={{
               flex: 1,
@@ -507,6 +500,7 @@ export default function WorkspacePage() {
             )}
           </div>
 
+          {/* Chat input */}
           {state !== "generating" && (
             <div style={{ padding: "12px 16px", borderTop: "1px solid #eef2f7" }}>
               <form
@@ -546,6 +540,7 @@ export default function WorkspacePage() {
                     border: "none",
                     color: "white",
                     cursor: "pointer",
+                    flexShrink: 0,
                   }}
                 >
                   Go
@@ -555,6 +550,7 @@ export default function WorkspacePage() {
           )}
         </div>
 
+        {/* Canvas */}
         <div style={{ flex: 1, minWidth: 0, position: "relative" }}>
           {architecture?.nodes?.length ? (
             <div style={{ width: "100%", height: "100%" }}>
@@ -575,14 +571,32 @@ export default function WorkspacePage() {
                 justifyContent: "center",
                 color: "#475569",
                 fontSize: "14px",
+                padding: "20px",
+                textAlign: "center",
               }}
             >
-              {state === "generating" ? "Generating architecture..." : "No architecture yet."}
+              {state === "generating" ? "Generating architecture..." : "No architecture yet. Enter a prompt to get started."}
             </div>
           )}
         </div>
       </div>
 
+      {/* Mobile overlay backdrop */}
+      {mobileSidebarOpen && (
+        <div
+          className="show-mobile"
+          onClick={() => setMobileSidebarOpen(false)}
+          style={{
+            position: "fixed",
+            inset: 0,
+            background: "rgba(0,0,0,0.4)",
+            zIndex: 25,
+            display: "none",
+          }}
+        />
+      )}
+
+      {/* Loading overlay */}
       {showLoadingOverlay && (
         <div
           style={{
@@ -604,14 +618,14 @@ export default function WorkspacePage() {
               border: "1px solid #cfe3ff",
               background: "linear-gradient(150deg, #ffffff, #f1f8ff)",
               boxShadow: "0 30px 60px rgba(15,23,42,0.15)",
-              padding: "28px 24px",
+              padding: "28px 20px",
               textAlign: "center",
             }}
           >
             <div
               style={{
-                width: "72px",
-                height: "72px",
+                width: "64px",
+                height: "64px",
                 margin: "0 auto 18px",
                 borderRadius: "9999px",
                 border: "6px solid #dbeafe",
@@ -619,11 +633,11 @@ export default function WorkspacePage() {
                 animation: "spin 0.9s linear infinite",
               }}
             />
-            <div style={{ fontSize: "24px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>
+            <div style={{ fontSize: "20px", fontWeight: 900, color: "#0f172a", marginBottom: "8px" }}>
               Loading Your Architecture
             </div>
-            <div style={{ fontSize: "14px", color: "#334155", lineHeight: 1.7 }}>
-              AI calls are running for client, gateway, service, data, and external constraints.
+            <div style={{ fontSize: "13px", color: "#334155", lineHeight: 1.7 }}>
+              AI calls are running for each architecture constraint.
               <br />
               Please wait while we configure your diagram.
             </div>
@@ -653,19 +667,79 @@ export default function WorkspacePage() {
 
       <style jsx>{`
         @keyframes spin {
-          to {
-            transform: rotate(360deg);
-          }
+          to { transform: rotate(360deg); }
         }
         @keyframes loader-slide {
-          0% {
-            transform: translateX(-120%);
+          0% { transform: translateX(-120%); }
+          100% { transform: translateX(340%); }
+        }
+
+        .workspace-sidebar {
+          width: 360px;
+          min-width: 360px;
+        }
+
+        /* Mobile menu button visible */
+        @media (max-width: 640px) {
+          .show-mobile { display: flex !important; }
+          .hidden-mobile { display: none !important; }
+          .mobile-tech-stack { display: block !important; }
+
+          .workspace-sidebar {
+            position: fixed;
+            top: 60px;
+            left: 0;
+            bottom: 0;
+            width: 85vw;
+            max-width: 340px;
+            min-width: unset;
+            z-index: 30;
+            transform: translateX(-100%);
+            transition: transform 0.28s ease;
+            border-right: 1px solid rgba(15,23,42,0.12);
           }
-          100% {
-            transform: translateX(340%);
+          .workspace-sidebar.sidebar-open {
+            transform: translateX(0);
           }
         }
       `}</style>
     </div>
+  );
+}
+
+function TechStackPopover({ techStack }: { techStack: TechStackItem[] }) {
+  if (!techStack.length) {
+    return <div style={{ fontSize: "12px", color: "#64748b" }}>No stack details yet.</div>;
+  }
+  return (
+    <>
+      <div style={{ fontSize: "13px", color: "#0f172a", fontWeight: 700, marginBottom: "10px" }}>
+        Tech Stack
+      </div>
+      {techStack.map((tech: TechStackItem, i: number) => (
+        <div
+          key={`${tech.name || tech.technology}-${i}`}
+          style={{
+            padding: "10px",
+            borderRadius: "10px",
+            border: "1px solid #e2e8f0",
+            marginBottom: "8px",
+            background: "#f8fafc",
+          }}
+        >
+          <div style={{ display: "flex", justifyContent: "space-between", gap: "8px", alignItems: "center" }}>
+            <span style={{ fontSize: "12px", fontWeight: 700, color: "#0f172a" }}>
+              {tech.name || tech.technology || "Technology"}
+            </span>
+            <span style={{ fontSize: "10px", fontWeight: 700, color: "#0b61d8", textTransform: "uppercase" }}>
+              {tech.category || "general"}
+            </span>
+          </div>
+          <div style={{ marginTop: "4px", fontSize: "11px", color: "#475569", lineHeight: 1.45 }}>
+            {tech.reason || ""}
+          </div>
+        </div>
+      ))}
+    </>
   );
 }
