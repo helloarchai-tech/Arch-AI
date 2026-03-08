@@ -67,7 +67,14 @@ export default function WorkspacePage() {
       try {
         const res = await fetch(`${API}/generate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+          mode: "cors",
+          credentials: "omit",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": API_KEY,
+            "X-Pinggy-No-Screen": "true",
+            "X-Pinggy-Allow-Origin": "*",
+          },
           body: JSON.stringify({ idea: ideaText, project_id: projectId }),
         });
         const data = await res.json();
@@ -148,7 +155,14 @@ export default function WorkspacePage() {
     try {
       const res = await fetch(`${API}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+        mode: "cors",
+        credentials: "omit",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": API_KEY,
+          "X-Pinggy-No-Screen": "true",
+          "X-Pinggy-Allow-Origin": "*",
+        },
         body: JSON.stringify({
           message,
           project_id: projectId,

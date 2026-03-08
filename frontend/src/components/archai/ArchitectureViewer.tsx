@@ -164,7 +164,14 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       try {
         const res = await fetch(`${API}/component-paragraphs`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+          mode: "cors",
+          credentials: "omit",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": API_KEY,
+            "X-Pinggy-No-Screen": "true",
+            "X-Pinggy-Allow-Origin": "*",
+          },
           body: JSON.stringify({
             project_id: projectId,
             idea,
@@ -199,7 +206,14 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       try {
         const res = await fetch(`${API}/generate`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": API_KEY },
+          mode: "cors",
+          credentials: "omit",
+          headers: {
+            "Content-Type": "application/json",
+            "x-api-key": API_KEY,
+            "X-Pinggy-No-Screen": "true",
+            "X-Pinggy-Allow-Origin": "*",
+          },
           body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
         });
         const data = await res.json();
@@ -247,7 +261,13 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       // Prefer prompt/context already linked to this project id to avoid stale sidebar text.
       try {
         const ctxRes = await fetch(`${API}/project/${projectId}/context`, {
-          headers: { "x-api-key": API_KEY },
+          mode: "cors",
+          credentials: "omit",
+          headers: {
+            "x-api-key": API_KEY,
+            "X-Pinggy-No-Screen": "true",
+            "X-Pinggy-Allow-Origin": "*",
+          },
         });
         if (ctxRes.ok) {
           const ctx = await ctxRes.json();
