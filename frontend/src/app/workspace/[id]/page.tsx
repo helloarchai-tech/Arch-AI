@@ -17,6 +17,18 @@ const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
 const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
 const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
 
+/** Returns auth headers — prefers a JWT stored at login, falls back to static API key. */
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    (typeof window !== "undefined" && localStorage.getItem("token")) || API_KEY;
+  return {
+    "x-api-key": API_KEY,
+    "Authorization": token ? `Bearer ${token}` : "",
+    "X-Pinggy-No-Screen": "true",
+    "X-Pinggy-Allow-Origin": "*",
+  };
+}
+
 type WorkspaceState = "idle" | "generating" | "ready" | "error";
 
 interface ChatMessage {
@@ -74,12 +86,7 @@ export default function WorkspacePage() {
           method: "POST",
           mode: "cors",
           credentials: "omit",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": API_KEY,
-            "X-Pinggy-No-Screen": "true",
-            "X-Pinggy-Allow-Origin": "*",
-          },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ idea: ideaText, project_id: projectId }),
         });
         const data = await res.json();
@@ -162,12 +169,7 @@ export default function WorkspacePage() {
         method: "POST",
         mode: "cors",
         credentials: "omit",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": API_KEY,
-          "X-Pinggy-No-Screen": "true",
-          "X-Pinggy-Allow-Origin": "*",
-        },
+        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
         body: JSON.stringify({
           message,
           project_id: projectId,

@@ -22,6 +22,18 @@ const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
   : _trimmed.replace(/^http:\/\//i, "https://");
 const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
 const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
+
+/** Returns auth headers — prefers a JWT stored at login, falls back to static API key. */
+function getAuthHeaders(): Record<string, string> {
+  const token =
+    (typeof window !== "undefined" && localStorage.getItem("token")) || API_KEY;
+  return {
+    "x-api-key": API_KEY,
+    "Authorization": token ? `Bearer ${token}` : "",
+    "X-Pinggy-No-Screen": "true",
+    "X-Pinggy-Allow-Origin": "*",
+  };
+}
 type ViewerState = "idle" | "loading" | "ready" | "error";
 
 interface ArchitectureViewerProps {
@@ -171,12 +183,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
           method: "POST",
           mode: "cors",
           credentials: "omit",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": API_KEY,
-            "X-Pinggy-No-Screen": "true",
-            "X-Pinggy-Allow-Origin": "*",
-          },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({
             project_id: projectId,
             idea,
@@ -213,12 +220,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
           method: "POST",
           mode: "cors",
           credentials: "omit",
-          headers: {
-            "Content-Type": "application/json",
-            "x-api-key": API_KEY,
-            "X-Pinggy-No-Screen": "true",
-            "X-Pinggy-Allow-Origin": "*",
-          },
+          headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
         });
         const data = await res.json();
@@ -268,11 +270,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
         const ctxRes = await fetch(`${API}/project/${projectId}/context`, {
           mode: "cors",
           credentials: "omit",
-          headers: {
-            "x-api-key": API_KEY,
-            "X-Pinggy-No-Screen": "true",
-            "X-Pinggy-Allow-Origin": "*",
-          },
+          headers: getAuthHeaders(),
         });
         if (ctxRes.ok) {
           const ctx = await ctxRes.json();
