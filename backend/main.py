@@ -40,15 +40,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── API Key Dependency (applied per-router, not globally) ────────────────
+# ── API Key Dependency (kept for projects router) ────────────────────────
 BACKEND_API_KEY = os.getenv("BACKEND_API_KEY", "my-super-secret-key")
 
 def verify_api_key(x_api_key: str = Header(None)):
     if x_api_key != BACKEND_API_KEY:
         raise HTTPException(status_code=401, detail="Unauthorized")
 
-# Register routes — API key required only for /api/* routes
-app.include_router(architecture_router, dependencies=[Depends(verify_api_key)])
+# Register routes — architecture routes are open (no auth); projects keeps auth
+app.include_router(architecture_router)
 app.include_router(projects_router, dependencies=[Depends(verify_api_key)])
 
 
