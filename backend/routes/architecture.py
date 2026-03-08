@@ -3,6 +3,7 @@ Arch.AI Backend — Architecture Routes (Agentic Pipeline)
 """
 
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, Any
 from engine.ai_engine import (
@@ -110,7 +111,10 @@ async def generate(req: GenerateRequest):
         )
         return result
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Architecture generation failed: {str(e)}")
+        return JSONResponse(
+            status_code=500,
+            content={"detail": f"Architecture generation failed: {str(e)}"},
+        )
 
 
 @router.post("/chat")

@@ -208,6 +208,14 @@ def generate_architecture(
         project_id=project_id,
     )
 
+    if not architecture or not isinstance(architecture, dict):
+        logger.error("generate_dynamic_architecture returned invalid result")
+        return {
+            "error": "Architecture generation produced an invalid result",
+            "nodes": [],
+            "edges": [],
+        }
+
     # Keep domain metadata for continuity in existing views and chat context.
     domain = ctx.get("domain", "dynamic")
     architecture["domain"] = domain
@@ -215,16 +223,23 @@ def generate_architecture(
     architecture["interview_answers"] = interview_answers
 
     # Preserve health/risk analysis with category defaults where metadata is missing.
-    health = analyze_health(
-        architecture["nodes"],
-        architecture["edges"],
-        constraints_dict,
-        domain="",
-    )
-    architecture["healthScores"] = {k: v["score"] for k, v in health.items()}
-    architecture["healthDetails"] = health
-    architecture["risks"] = get_risks(architecture["nodes"], "", constraints_dict)
-    architecture["securitySuggestions"] = get_security_suggestions(architecture["nodes"], "", constraints_dict)
+    try:
+        health = analyze_health(
+            architecture.get("nodes") or [],
+            architecture.get("edges") or [],
+            constraints_dict,
+            domain="",
+        )
+        architecture["healthScores"] = {k: v["score"] for k, v in health.items()}
+        architecture["healthDetails"] = health
+        architecture["risks"] = get_risks(architecture.get("nodes") or [], "", constraints_dict)
+        architecture["securitySuggestions"] = get_security_suggestions(architecture.get("nodes") or [], "", constraints_dict)
+    except Exception as health_err:
+        logger.warning(f"Health analysis failed (non-fatal): {health_err}")
+        architecture.setdefault("healthScores", {})
+        architecture.setdefault("healthDetails", {})
+        architecture.setdefault("risks", [])
+        architecture.setdefault("securitySuggestions", [])
 
     set_architecture(project_id, architecture)
     return architecture

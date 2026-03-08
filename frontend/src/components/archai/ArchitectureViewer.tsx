@@ -15,7 +15,12 @@ import { buildRevealPlan, type BuildPhase } from "./StaggeredReveal";
 import type { ArchitecturePayload, ArchEdge, ArchNode } from "./types";
 
 const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
-const API = RAW_API.replace(/^http:\/\//i, "https://");
+// Normalize: force https (except localhost), ensure /api suffix is always present
+const _trimmed = RAW_API.replace(/\/+$/, "");
+const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
+  ? _trimmed
+  : _trimmed.replace(/^http:\/\//i, "https://");
+const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
 const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
 type ViewerState = "idle" | "loading" | "ready" | "error";
 
