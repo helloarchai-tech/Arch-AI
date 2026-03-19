@@ -178,54 +178,41 @@ def _build_system_message() -> str:
     )
 
 
-def _build_layer_prompt(idea: str, layer: str, global_context: dict) -> str:
-    layer_guidance = {
-        "client": "frontend/client-facing components the end-user interacts with (web apps, mobile apps, dashboards, admin panels specific to this product)",
-        "gateway": "API gateways, load balancers, auth middleware, rate limiters — the entry points that protect and route traffic for this specific system",
-        "service": "core backend/business-logic services that implement the SPECIFIC features of this product (NOT generic names — name them after what they actually do)",
-        "data": "databases, caches, message queues, data stores — pick technologies that match this product's specific data patterns",
-        "external": "third-party APIs, external services, cloud providers this specific product would integrate with",
-    }
+def _build_combined_prompt(idea: str) -> str:
+    """Single prompt that generates the ENTIRE architecture in one LLM call."""
     return (
-        f"You are designing the '{layer}' layer of a software architecture.\n"
-        f"Layer purpose: {layer_guidance.get(layer, 'system components')}.\n\n"
-        f"THE PRODUCT: {idea}\n\n"
+        f"Design a complete system architecture for this product:\n"
+        f"{idea}\n\n"
+        "Generate ALL 5 layers of the architecture in a SINGLE response.\n"
+        "Each layer must have 2-4 components with PRODUCT-SPECIFIC names (not generic).\n\n"
+        "The 5 layers are:\n"
+        "- client: frontend/UI components the end-user interacts with\n"
+        "- gateway: API gateways, auth middleware, load balancers\n"
+        "- service: core backend services implementing THIS product's specific features\n"
+        "- data: databases, caches, message queues matching this product's data patterns\n"
+        "- external: third-party APIs and services this product integrates with\n\n"
         "CRITICAL RULES:\n"
-        f"1. constraint MUST be '{layer}' exactly.\n"
-        "2. Component names MUST be specific to this product. "
-        "Do NOT use generic names like 'Core Service', 'Main Component', or 'Service A'. "
-        "Name each component after its actual role in THIS specific system.\n"
-        "3. Tech choices must match what this specific product needs.\n"
-        "4. Keep 2-5 components (only what this product actually needs).\n"
-        "5. Relationships should reference component names from OTHER layers when needed.\n\n"
-        "Return ONLY JSON:\n"
+        "1. Component names MUST be specific to THIS product (e.g., 'Patient Monitor Dashboard' not 'Web Client')\n"
+        "2. Tech choices must match what this specific product needs\n"
+        "3. Include relationships BETWEEN components across layers\n\n"
+        "Return ONLY this JSON structure:\n"
         "{\n"
-        f'  "constraint": "{layer}",\n'
-        '  "components": [{"name": "Product-Specific Name", "tech": "Actual Technology", "description": "What it does in this system"}],\n'
-        '  "relationships": [{"source": "Component Name", "target": "Other Component", "relation": "what data flows", "animated": true}]\n'
-        "}\n\n"
-        f"System context so far: {json.dumps(global_context)}\n"
-    )
-
-
-def _build_global_prompt(idea: str) -> str:
-    return (
-        "Analyze this product idea and extract the architecture intent.\n"
-        "Think deeply about what THIS SPECIFIC product needs — its unique domain, "
-        "the specific data it handles, the user interactions it supports, "
-        "and the integrations it requires.\n\n"
-        f"PRODUCT IDEA: {idea}\n\n"
-        "Return ONLY JSON:\n"
-        "{\n"
-        '  "system_name": "A specific name for this system (not generic)",\n'
-        '  "problem_summary": "What problem this product solves and its key requirements",\n'
-        '  "key_features": ["feature1", "feature2", "..."],\n'
-        '  "domain_specific_concerns": ["concern1", "concern2"],\n'
-        '  "cross_constraint_relationships": [\n'
-        '    {"source": "Specific Component", "target": "Other Component", "relation": "what flows between them"}\n'
-        "  ]\n"
+        '  "system_name": "A specific name for this system",\n'
+        '  "problem_summary": "What this product solves",\n'
+        '  "layers": [\n'
+        '    {\n'
+        '      "constraint": "client",\n'
+        '      "components": [{"name": "Product-Specific Name", "tech": "Technology", "description": "What it does"}],\n'
+        '      "relationships": [{"source": "Component", "target": "Other Component", "relation": "data flow", "animated": true}]\n'
+        '    },\n'
+        '    ... (repeat for gateway, service, data, external)\n'
+        '  ],\n'
+        '  "tech_stack": [\n'
+        '    {"name": "Technology", "category": "frontend|backend|database|infra|external", "reason": "Why this product needs it"}\n'
+        '  ]\n'
         "}\n"
     )
+
 
 
 def _build_stack_prompt(idea: str, layer_payloads: list[dict]) -> str:
@@ -254,39 +241,31 @@ def generate_dynamic_architecture(
 ) -> dict:
     """
     Generate architecture content dynamically with Ollama.
-    The fixed constraints are client/gateway/service/data/external.
+    Uses a SINGLE combined prompt for all layers to minimize LLM calls.
     """
     pid = project_id or f"proj_{uuid.uuid4().hex[:12]}"
     templates = _load_templates()
     sys_msg = {"role": "system", "content": _build_system_message()}
 
-    global_context: dict = {}
-    global_resp = call_llm(
-        [sys_msg, {"role": "user", "content": _build_global_prompt(idea)}],
-        0.4,
+    # ── SINGLE combined LLM call for entire architecture ──
+    combined_resp = call_llm(
+        [sys_msg, {"role": "user", "content": _build_combined_prompt(idea)}],
+        0.5,
     )
-    parsed_global = _parse_json_response(global_resp or "")
-    if parsed_global:
-        global_context = parsed_global
+    parsed_combined = _parse_json_response(combined_resp or "") or {}
 
+    # Extract layers from combined response
     layer_payloads: list[dict] = []
+    raw_layers = _safe_list(parsed_combined.get("layers"))
     for layer in CONSTRAINTS:
-        layer_resp = call_llm(
-            [sys_msg, {"role": "user", "content": _build_layer_prompt(idea, layer, global_context)}],
-            0.5,
-        )
-        parsed = _parse_json_response(layer_resp or "")
-        if parsed and isinstance(parsed.get("components"), list):
-            layer_payloads.append(parsed)
+        found = next((l for l in raw_layers if l.get("constraint") == layer), None)
+        if found and isinstance(found.get("components"), list) and len(found["components"]) > 0:
+            layer_payloads.append(found)
         else:
             layer_payloads.append(_build_fallback_layer(layer))
 
-    stack_resp = call_llm(
-        [sys_msg, {"role": "user", "content": _build_stack_prompt(idea, layer_payloads)}],
-        0.3,
-    )
-    parsed_stack = _parse_json_response(stack_resp or "") or {}
-    tech_stack = _safe_list(parsed_stack.get("tech_stack"))
+    # Extract tech stack from combined response or use fallback
+    tech_stack = _safe_list(parsed_combined.get("tech_stack"))
     if not tech_stack:
         tech_stack = [
             {"name": "Frontend Framework", "category": "client", "reason": "UI for end users"},
@@ -294,6 +273,13 @@ def generate_dynamic_architecture(
             {"name": "Application Service", "category": "service", "reason": "Business logic execution"},
             {"name": "Primary Database", "category": "data", "reason": "Persistent storage"},
         ]
+
+    # Extract global context
+    global_context = {
+        "system_name": parsed_combined.get("system_name", idea[:80]),
+        "problem_summary": parsed_combined.get("problem_summary", ""),
+        "cross_constraint_relationships": [],
+    }
 
     nodes: list[dict] = []
     all_relationships: list[dict] = _safe_list(global_context.get("cross_constraint_relationships"))
