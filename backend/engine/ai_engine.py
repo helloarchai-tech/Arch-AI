@@ -39,14 +39,15 @@ def _get_client() -> tuple[Optional[OpenAI], str]:
 
     ollama_url = os.getenv("OLLAMA_BASE_URL")
     ollama_model = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
+    ollama_api_key = os.getenv("OLLAMA_CLOUD_API_KEY") or os.getenv("OLLAMA_API_KEY") or "ollama"
     if ollama_url:
         try:
-            _client = OpenAI(base_url=ollama_url, api_key="ollama")
+            _client = OpenAI(base_url=ollama_url, api_key=ollama_api_key)
             _model = ollama_model
-            logger.info(f"Using Ollama Cloud: {ollama_url} / {ollama_model}")
+            logger.info(f"Using Ollama: {ollama_url} / {ollama_model}")
             return _client, _model
         except Exception as e:
-            logger.warning(f"Ollama Cloud init failed: {e}")
+            logger.warning(f"Ollama init failed: {e}")
 
     openai_key = os.getenv("OPENAI_API_KEY")
     openai_url = os.getenv("OPENAI_BASE_URL", "https://api.openai.com/v1")
@@ -70,7 +71,8 @@ def _call_llm(messages: list[dict], temperature: float = 0.7) -> Optional[str]:
         return None
     try:
         response = client.chat.completions.create(
-            model=model, messages=messages, temperature=temperature, max_tokens=4096,
+            model=model, messages=messages, temperature=temperature, max_tokens=2048,
+            timeout=60,
         )
         return response.choices[0].message.content
     except Exception as e:

@@ -271,20 +271,31 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       setComponentParagraphs({});
 
       try {
+        // LLM generates 7 sequential calls (~12s each) — need long timeout
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min
+
         const res = await fetch(`${API}/generate`, {
           method: "POST",
           mode: "cors",
           credentials: "omit",
+          signal: controller.signal,
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
         });
+        clearTimeout(timeout);
+
         const data = await res.json();
-        if (!res.ok || !data?.nodes?.length) throw new Error("Generation failed");
+        console.log("[Arch.AI] generate response status:", res.status, "nodes:", data?.nodes?.length);
+        if (!res.ok || !data?.nodes?.length) {
+          console.error("[Arch.AI] generate response body:", data);
+          throw new Error(data?.error || "Generation failed — no nodes returned");
+        }
         setTechStackItems(extractTechStack(data));
         fetchComponentParagraphs(cleanPrompt, data);
         startReveal(data);
       } catch (error) {
-        console.error("[Arch.AI] generation failed", error);
+        console.error("[Arch.AI] generation failed:", error instanceof Error ? error.message : error);
         clearTimers();
         fullArchitectureRef.current = null;
         setDisplayNodes([]);
