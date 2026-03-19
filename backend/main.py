@@ -26,16 +26,11 @@ app = FastAPI(
     version="1.0.0",
 )
 
-# CORS — allow frontend
+# CORS — allow all origins (frontend uses credentials: "omit")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://arch-ai-chi-lac.vercel.app",
-        "*",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -113,3 +108,17 @@ async def root():
 async def health():
     return {"status": "healthy"}
 
+
+@app.get("/api/test-generate")
+async def test_generate():
+    """Quick smoke test: generates a small architecture and returns summary. Curl this from the VM."""
+    from engine.ai_engine import generate_architecture
+    result = generate_architecture(idea="a simple todo app", target_users=100, project_id="test_smoke")
+    node_labels = [n.get("data", {}).get("label", "?") for n in result.get("nodes", [])[:5]]
+    return {
+        "status": "ok",
+        "node_count": len(result.get("nodes", [])),
+        "edge_count": len(result.get("edges", [])),
+        "first_labels": node_labels,
+        "has_error": "error" in result,
+    }
