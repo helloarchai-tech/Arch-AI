@@ -254,40 +254,51 @@ def chat_response(
     ctx = get_context(project_id)
     arch_context = get_architecture_context(project_id) if ctx else {}
 
-    # Build rich context for the LLM
-    title = arch_context.get("idea", context.get("title", "the project") if context else "the project")
-    domain = arch_context.get("domain_label", "")
+    # Build title and summary — prefer server context, fall back to frontend-sent context
+    title = (
+        arch_context.get("idea")
+        or (context.get("title") if context else None)
+        or "Architecture Project"
+    )
     summary = ""
     if arch_context.get("current_architecture"):
         arch = arch_context["current_architecture"]
         summary = arch.get("summary", "")
-        comp_list = ", ".join(n["data"]["label"] for n in arch.get("nodes", [])[:8])
-        summary += f"\nComponents: {comp_list}"
+        comp_list = ", ".join(
+            n["data"]["label"] for n in arch.get("nodes", [])[:10]
+            if n.get("data", {}).get("label")
+        )
+        if comp_list:
+            summary += f"\nComponents: {comp_list}"
+    # Fallback: use frontend context summary
+    if not summary and context:
+        summary = context.get("summary", "")
 
-    chat_history = arch_context.get("chat_summary", "")
+    # Track the user's message
+    add_chat_message(project_id, "user", message)
 
     user_prompt = CHAT_PROMPT.format(
         title=title,
-        summary=f"Domain: {domain}\n{summary}\n\nRecent conversation:\n{chat_history}",
+        summary=summary or "Architecture details not available yet.",
         message=message,
     )
-
-    # Track chat messages
-    add_chat_message(project_id, "user", message)
 
     response_text = _call_llm([
         {"role": "system", "content": SYSTEM_PROMPT},
         {"role": "user", "content": user_prompt},
-    ])
+    ], temperature=0.4)
 
     if response_text:
         add_chat_message(project_id, "assistant", response_text)
         return {"response": response_text, "updated_architecture": None}
 
-    # Mock response with context awareness
-    mock_resp = _generate_contextual_mock_response(message, title, domain)
-    add_chat_message(project_id, "assistant", mock_resp)
-    return {"response": mock_resp, "updated_architecture": None}
+    # Clear fallback — don't pretend to answer
+    fallback = (
+        "I'm unable to reach the AI model right now. "
+        "Please make sure Ollama is running on your server and try again."
+    )
+    add_chat_message(project_id, "assistant", fallback)
+    return {"response": fallback, "updated_architecture": None}
 
 
 def scale_architecture(

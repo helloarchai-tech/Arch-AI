@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Cpu, Send, MessageCircle, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Cpu, Send, MessageCircle } from "lucide-react";
 
 const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
 const _trimmed = RAW_API.replace(/\/+$/, "");
@@ -198,12 +198,19 @@ export default function ViewerSidebar({
                 </AnimatePresence>
                 {sending && (
                   <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    className="flex items-center gap-2 text-[11px] text-slate-400"
+                    initial={{ opacity: 0, y: 4 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                    className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800/60 border border-slate-600/30 self-start"
                   >
-                    <Loader2 size={12} className="animate-spin text-cyan-300" />
-                    Arch.AI is thinking...
+                    {[0, 1, 2].map((i) => (
+                      <motion.span
+                        key={i}
+                        animate={{ y: [0, -4, 0] }}
+                        transition={{ duration: 0.6, delay: i * 0.15, repeat: Infinity, ease: "easeInOut" }}
+                        className="block w-1.5 h-1.5 rounded-full bg-cyan-300"
+                      />
+                    ))}
                   </motion.div>
                 )}
                 <div ref={chatEndRef} />
