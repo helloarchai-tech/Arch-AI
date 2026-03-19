@@ -165,53 +165,85 @@ def _to_node_id_lookup(nodes: list[dict]) -> dict[str, str]:
     return lookup
 
 
-def _build_layer_prompt(idea: str, layer: str, global_context: dict) -> str:
+def _build_system_message() -> str:
+    """Strong system-level instruction prepended to every LLM call."""
     return (
-        "You are designing one section of a software architecture diagram.\n"
-        "Return only JSON with this schema:\n"
+        "You are an expert software architect. You design architectures that are "
+        "UNIQUE and SPECIFIC to each user's product idea. "
+        "NEVER produce generic boilerplate. Every component name, technology choice, "
+        "and relationship MUST reflect the user's actual product domain. "
+        "For example, if the user wants a 'food delivery app', components should be named "
+        "'Order Service', 'Restaurant Dashboard', 'Delivery Tracker', NOT 'Core Service' or 'Component 1'. "
+        "Always return ONLY valid JSON with no extra text."
+    )
+
+
+def _build_layer_prompt(idea: str, layer: str, global_context: dict) -> str:
+    layer_guidance = {
+        "client": "frontend/client-facing components the end-user interacts with (web apps, mobile apps, dashboards, admin panels specific to this product)",
+        "gateway": "API gateways, load balancers, auth middleware, rate limiters — the entry points that protect and route traffic for this specific system",
+        "service": "core backend/business-logic services that implement the SPECIFIC features of this product (NOT generic names — name them after what they actually do)",
+        "data": "databases, caches, message queues, data stores — pick technologies that match this product's specific data patterns",
+        "external": "third-party APIs, external services, cloud providers this specific product would integrate with",
+    }
+    return (
+        f"You are designing the '{layer}' layer of a software architecture.\n"
+        f"Layer purpose: {layer_guidance.get(layer, 'system components')}.\n\n"
+        f"THE PRODUCT: {idea}\n\n"
+        "CRITICAL RULES:\n"
+        f"1. constraint MUST be '{layer}' exactly.\n"
+        "2. Component names MUST be specific to this product. "
+        "Do NOT use generic names like 'Core Service', 'Main Component', or 'Service A'. "
+        "Name each component after its actual role in THIS specific system.\n"
+        "3. Tech choices must match what this specific product needs.\n"
+        "4. Keep 2-5 components (only what this product actually needs).\n"
+        "5. Relationships should reference component names from OTHER layers when needed.\n\n"
+        "Return ONLY JSON:\n"
         "{\n"
-        '  "constraint": "<layer>",\n'
-        '  "components": [{"name": "...", "tech": "...", "description": "..."}],\n'
-        '  "relationships": [\n'
-        '    {"source": "...", "target": "...", "relation": "...", "animated": true}\n'
-        "  ]\n"
-        "}\n"
-        "Rules:\n"
-        f"- constraint must be '{layer}' exactly.\n"
-        "- components should be concise and concrete.\n"
-        "- relationships may target components from other constraints when needed.\n"
-        "- Keep at most 6 components.\n\n"
-        f"User prompt: {idea}\n"
-        f"Global context: {json.dumps(global_context)}\n"
+        f'  "constraint": "{layer}",\n'
+        '  "components": [{"name": "Product-Specific Name", "tech": "Actual Technology", "description": "What it does in this system"}],\n'
+        '  "relationships": [{"source": "Component Name", "target": "Other Component", "relation": "what data flows", "animated": true}]\n'
+        "}\n\n"
+        f"System context so far: {json.dumps(global_context)}\n"
     )
 
 
 def _build_global_prompt(idea: str) -> str:
     return (
-        "Extract architecture intent from this user prompt. Return only JSON:\n"
+        "Analyze this product idea and extract the architecture intent.\n"
+        "Think deeply about what THIS SPECIFIC product needs — its unique domain, "
+        "the specific data it handles, the user interactions it supports, "
+        "and the integrations it requires.\n\n"
+        f"PRODUCT IDEA: {idea}\n\n"
+        "Return ONLY JSON:\n"
         "{\n"
-        '  "system_name": "...",\n'
-        '  "problem_summary": "...",\n'
+        '  "system_name": "A specific name for this system (not generic)",\n'
+        '  "problem_summary": "What problem this product solves and its key requirements",\n'
+        '  "key_features": ["feature1", "feature2", "..."],\n'
+        '  "domain_specific_concerns": ["concern1", "concern2"],\n'
         '  "cross_constraint_relationships": [\n'
-        '    {"source": "...", "target": "...", "relation": "..."}\n'
+        '    {"source": "Specific Component", "target": "Other Component", "relation": "what flows between them"}\n'
         "  ]\n"
         "}\n"
-        f"Prompt: {idea}\n"
     )
 
 
 def _build_stack_prompt(idea: str, layer_payloads: list[dict]) -> str:
     return (
-        "Generate a practical tech stack list for this architecture.\n"
-        "Return only JSON:\n"
+        "Based on the product idea and the architecture components already designed, "
+        "generate a SPECIFIC tech stack tailored to this product's needs.\n"
+        "Do NOT suggest generic stacks — pick technologies that solve this product's "
+        "actual requirements (e.g., if it's a real-time app, suggest WebSocket/Socket.io; "
+        "if it handles payments, suggest Stripe; if it needs search, suggest Elasticsearch).\n\n"
+        f"PRODUCT IDEA: {idea}\n\n"
+        "Return ONLY JSON:\n"
         "{\n"
         '  "tech_stack": [\n'
-        '    {"name": "...", "category": "...", "reason": "..."}\n'
+        '    {"name": "Technology Name", "category": "frontend|backend|database|infra|external", "reason": "Why this product specifically needs it"}\n'
         "  ]\n"
         "}\n"
-        "Use 6-12 items and short reasons.\n"
-        f"User prompt: {idea}\n"
-        f"Architecture sections: {json.dumps(layer_payloads)}\n"
+        "Include 6-12 items. Reasons must reference this specific product.\n"
+        f"Architecture designed so far: {json.dumps(layer_payloads)}\n"
     )
 
 
@@ -226,11 +258,12 @@ def generate_dynamic_architecture(
     """
     pid = project_id or f"proj_{uuid.uuid4().hex[:12]}"
     templates = _load_templates()
+    sys_msg = {"role": "system", "content": _build_system_message()}
 
     global_context: dict = {}
     global_resp = call_llm(
-        [{"role": "user", "content": _build_global_prompt(idea)}],
-        0.2,
+        [sys_msg, {"role": "user", "content": _build_global_prompt(idea)}],
+        0.4,
     )
     parsed_global = _parse_json_response(global_resp or "")
     if parsed_global:
@@ -239,8 +272,8 @@ def generate_dynamic_architecture(
     layer_payloads: list[dict] = []
     for layer in CONSTRAINTS:
         layer_resp = call_llm(
-            [{"role": "user", "content": _build_layer_prompt(idea, layer, global_context)}],
-            0.3,
+            [sys_msg, {"role": "user", "content": _build_layer_prompt(idea, layer, global_context)}],
+            0.5,
         )
         parsed = _parse_json_response(layer_resp or "")
         if parsed and isinstance(parsed.get("components"), list):
@@ -249,8 +282,8 @@ def generate_dynamic_architecture(
             layer_payloads.append(_build_fallback_layer(layer))
 
     stack_resp = call_llm(
-        [{"role": "user", "content": _build_stack_prompt(idea, layer_payloads)}],
-        0.2,
+        [sys_msg, {"role": "user", "content": _build_stack_prompt(idea, layer_payloads)}],
+        0.3,
     )
     parsed_stack = _parse_json_response(stack_resp or "") or {}
     tech_stack = _safe_list(parsed_stack.get("tech_stack"))

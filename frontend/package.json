@@ -13,6 +13,7 @@
     "@reactflow/controls": "^11.2.14",
     "@reactflow/core": "^11.11.4",
     "@reactflow/minimap": "^11.7.14",
+    "@supabase/supabase-js": "^2.99.3",
     "@tailwindcss/postcss": "^4.2.1",
     "d3": "^7.9.0",
     "d3-force": "^3.0.0",

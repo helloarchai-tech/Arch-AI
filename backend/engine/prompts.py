@@ -90,10 +90,14 @@ SUMMARY: {summary}
 
 The user asks: {message}
 
-Respond helpfully with architecture-aware advice. Be specific to their project context.
-If they ask about technology choices, compare options in the context of their architecture.
-If they want modifications, describe what would change in their architecture.
-Keep responses concise but thorough (2-4 paragraphs max)."""
+CRITICAL RULES:
+1. ONLY answer questions that are directly related to the user's architecture, system design, technology choices, scaling, security, deployment, or software engineering.
+2. If the user asks something UNRELATED to their architecture or software engineering (e.g., weather, jokes, general knowledge, personal questions), respond EXACTLY with:
+   "I'm Arch.AI, your architecture assistant. I can only help with questions about your system design and architecture. Try asking about your components, tech stack, scaling strategy, or security!"
+3. Be specific to THEIR project context — reference their actual components and tech choices.
+4. If they ask about technology choices, compare options in the context of their architecture.
+5. If they want modifications, describe what would change in their architecture.
+6. Keep responses concise but thorough (2-4 paragraphs max)."""
 
 SCALE_PROMPT = """The user wants to scale their architecture from the current design to support {target_users} concurrent users.
 
