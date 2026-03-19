@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
 import type { ReactFlowInstance } from "reactflow";
-import { ArrowLeft, CheckCircle2, Send, MessageCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import ArchitectureCanvas from "./ArchitectureCanvas";
 import ComponentWalkthroughPanel from "./ComponentWalkthroughPanel";
 import GenerationOverlay from "./GenerationOverlay";
@@ -446,6 +446,9 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             collapsed={collapsed}
             currentPrompt={currentPrompt}
             finalPrompt={finalPrompt}
+            projectId={projectId}
+            architectureTitle={fullArchitectureRef.current?.title}
+            architectureSummary={fullArchitectureRef.current?.summary}
             onPromptChange={setCurrentPrompt}
             onToggle={() => setCollapsed((v) => !v)}
             onRegenerate={() => generateArchitecture(currentPrompt)}
@@ -599,124 +602,6 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
               )}
             </AnimatePresence>
           </motion.div>
-
-          {/* ── Chat Panel (below canvas) ── */}
-          {state === "ready" && (
-            <div className="glass-panel" style={{
-              position: "absolute",
-              bottom: 16, left: 16, right: 16, zIndex: 25,
-              borderRadius: 16,
-              border: "1px solid rgba(148,163,184,0.2)",
-              maxHeight: chatOpen ? 340 : 48,
-              transition: "max-height 0.35s ease",
-              overflow: "hidden",
-              display: "flex",
-              flexDirection: "column",
-            }}>
-              {/* Chat header */}
-              <button
-                onClick={() => setChatOpen((v) => !v)}
-                style={{
-                  display: "flex", alignItems: "center", gap: 8,
-                  padding: "12px 16px", background: "none", border: "none",
-                  color: "#94a3b8", cursor: "pointer", width: "100%",
-                  fontSize: 12, fontWeight: 700, fontFamily: "inherit",
-                  textTransform: "uppercase", letterSpacing: "0.12em",
-                }}
-              >
-                <MessageCircle size={14} />
-                Ask about this architecture
-                <span style={{ marginLeft: "auto" }}>
-                  {chatOpen ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-                </span>
-              </button>
-
-              {/* Chat messages */}
-              <div style={{
-                flex: 1, overflowY: "auto", padding: "0 16px 8px",
-                display: "flex", flexDirection: "column", gap: 8,
-              }}>
-                {chatMessages.length === 0 && (
-                  <div style={{ fontSize: 12, color: "#64748b", padding: "8px 0" }}>
-                    Ask questions about your architecture — tech choices, scaling, security, and more.
-                  </div>
-                )}
-                {chatMessages.map((m, i) => (
-                  <motion.div
-                    key={i}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.2 }}
-                    style={{
-                      alignSelf: m.role === "user" ? "flex-end" : "flex-start",
-                      maxWidth: "80%",
-                      padding: "8px 14px",
-                      borderRadius: 10,
-                      fontSize: 13,
-                      lineHeight: 1.55,
-                      background: m.role === "user"
-                        ? "rgba(59,130,246,0.2)"
-                        : "rgba(255,255,255,0.05)",
-                      border: `1px solid ${m.role === "user" ? "rgba(59,130,246,0.3)" : "rgba(255,255,255,0.08)"}`,
-                      color: "#e2e8f0",
-                      whiteSpace: "pre-wrap",
-                    }}
-                  >
-                    {m.content}
-                  </motion.div>
-                ))}
-                {chatSending && (
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "4px 0" }}>
-                    <div style={{
-                      width: 14, height: 14,
-                      border: "2px solid rgba(148,163,184,0.3)",
-                      borderTopColor: "#3b82f6",
-                      borderRadius: "50%",
-                      animation: "walk-spin 0.7s linear infinite",
-                    }} />
-                    <span style={{ fontSize: 11, color: "#64748b" }}>Thinking...</span>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Chat input */}
-              <form
-                onSubmit={(e) => { e.preventDefault(); handleChatSend(); }}
-                style={{
-                  display: "flex", gap: 8, padding: "8px 16px 12px",
-                  borderTop: "1px solid rgba(148,163,184,0.12)",
-                }}
-              >
-                <input
-                  value={chatInput}
-                  onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask about your architecture..."
-                  disabled={chatSending}
-                  style={{
-                    flex: 1, padding: "10px 14px", borderRadius: 10,
-                    background: "rgba(0,0,0,0.3)",
-                    border: "1px solid rgba(148,163,184,0.15)",
-                    color: "#e2e8f0", fontSize: 13, outline: "none",
-                    fontFamily: "inherit",
-                  }}
-                />
-                <button
-                  type="submit"
-                  disabled={chatSending || !chatInput.trim()}
-                  style={{
-                    width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                    background: "linear-gradient(135deg, #3b82f6, #10b981)",
-                    border: "none", color: "white", cursor: "pointer",
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    opacity: chatSending || !chatInput.trim() ? 0.5 : 1,
-                  }}
-                >
-                  <Send size={14} />
-                </button>
-              </form>
-            </div>
-          )}
         </main>
       </div>
     </div>
