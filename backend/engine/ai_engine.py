@@ -37,7 +37,8 @@ def _get_client() -> tuple[Optional[OpenAI], str]:
     if _client is not None:
         return _client, _model
 
-    ollama_url = os.getenv("OLLAMA_BASE_URL")
+    # Default to local Ollama endpoint so chat keeps working even if .env is not present.
+    ollama_url = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
     ollama_model = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
     ollama_api_key = os.getenv("OLLAMA_CLOUD_API_KEY") or os.getenv("OLLAMA_API_KEY") or "ollama"
     if ollama_url:
