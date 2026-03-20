@@ -252,17 +252,66 @@ def generate_dynamic_architecture(
         [sys_msg, {"role": "user", "content": _build_combined_prompt(idea)}],
         0.5,
     )
-    parsed_combined = _parse_json_response(combined_resp or "") or {}
+    logger.info(f"Raw LLM response length: {len(combined_resp or '')}")
+    if combined_resp:
+        logger.info(f"Raw LLM response (first 500 chars): {combined_resp[:500]}")
 
-    # Extract layers from combined response
-    layer_payloads: list[dict] = []
+    parsed_combined = _parse_json_response(combined_resp or "") or {}
+    logger.info(f"Parsed JSON keys: {list(parsed_combined.keys())}")
+
+    # ── Extract layers — try multiple possible structures ──
     raw_layers = _safe_list(parsed_combined.get("layers"))
+    if not raw_layers:
+        # Try alternative key names the LLM might use
+        for alt_key in ("architecture", "system", "design"):
+            nested = parsed_combined.get(alt_key)
+            if isinstance(nested, dict):
+                raw_layers = _safe_list(nested.get("layers"))
+                if raw_layers:
+                    break
+            elif isinstance(nested, list):
+                raw_layers = nested
+                break
+
+    logger.info(f"Found {len(raw_layers)} raw layers")
+
+    layer_payloads: list[dict] = []
     for layer in CONSTRAINTS:
-        found = next((l for l in raw_layers if l.get("constraint") == layer), None)
+        # Try multiple field names for the constraint/layer type
+        found = None
+        for field in ("constraint", "layer", "name", "type", "tier"):
+            found = next(
+                (l for l in raw_layers if _safe_str(l.get(field)).lower() == layer),
+                None,
+            )
+            if found:
+                break
+
         if found and isinstance(found.get("components"), list) and len(found["components"]) > 0:
+            found["constraint"] = layer  # normalize
             layer_payloads.append(found)
+            logger.info(f"  Layer '{layer}': {len(found['components'])} LLM components")
         else:
             layer_payloads.append(_build_fallback_layer(layer))
+            logger.info(f"  Layer '{layer}': using fallback")
+
+    # If ALL layers used fallback AND we have raw_layers, try positional mapping
+    all_fallback = all(
+        any(c.get("name") in ("Web Client", "Mobile Client", "API Gateway", "Auth Service",
+                               "Core Service", "Notification Worker", "Primary Database",
+                               "Cache", "Payment Provider")
+            for c in p.get("components", []))
+        for p in layer_payloads
+    )
+    if all_fallback and len(raw_layers) >= 3:
+        logger.info("All layers used fallback — trying positional mapping")
+        layer_payloads = []
+        for idx, layer in enumerate(CONSTRAINTS):
+            if idx < len(raw_layers) and isinstance(raw_layers[idx].get("components"), list):
+                raw_layers[idx]["constraint"] = layer
+                layer_payloads.append(raw_layers[idx])
+            else:
+                layer_payloads.append(_build_fallback_layer(layer))
 
     # Extract tech stack from combined response or use fallback
     tech_stack = _safe_list(parsed_combined.get("tech_stack"))

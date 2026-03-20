@@ -1,7 +1,10 @@
 """
 Arch.AI Backend — Architecture Routes (Agentic Pipeline)
+All blocking LLM calls wrapped with asyncio.to_thread so the event loop
+stays active and the serveo/cloudflare tunnel doesn't time out.
 """
 
+import asyncio
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -65,7 +68,7 @@ class ComponentParagraphRequest(BaseModel):
 async def classify(req: ClassifyRequest):
     """Step 1: Classify user idea into a domain category."""
     try:
-        result = classify_idea(req.idea)
+        result = await asyncio.to_thread(classify_idea, req.idea)
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Classification failed: {str(e)}")
@@ -89,7 +92,7 @@ async def get_interview(project_id: str):
 async def submit_interview(req: InterviewAnswerRequest):
     """Step 2b: Submit clarification answers."""
     try:
-        result = submit_answers(req.project_id, req.answers)
+        result = await asyncio.to_thread(submit_answers, req.project_id, req.answers)
         if "error" in result:
             raise HTTPException(status_code=404, detail=result["error"])
         return result
@@ -101,13 +104,17 @@ async def submit_interview(req: InterviewAnswerRequest):
 
 @router.post("/generate")
 async def generate(req: GenerateRequest):
-    """Step 3: Generate domain-specific architecture."""
+    """Step 3: Generate domain-specific architecture.
+    Uses asyncio.to_thread so the blocking LLM call doesn't freeze the event loop.
+    This keeps the HTTP connection alive through serveo/cloudflare tunnels.
+    """
     try:
-        result = generate_architecture(
-            idea=req.idea,
-            target_users=req.target_users or 10000,
-            constraints=req.constraints or "",
-            project_id=req.project_id,
+        result = await asyncio.to_thread(
+            generate_architecture,
+            req.idea,
+            req.target_users or 10000,
+            req.constraints or "",
+            req.project_id,
         )
         return result
     except Exception as e:
@@ -121,10 +128,11 @@ async def generate(req: GenerateRequest):
 async def chat(req: ChatRequest):
     """Context-aware chat about the architecture."""
     try:
-        result = chat_response(
-            message=req.message,
-            project_id=req.project_id,
-            context=req.context,
+        result = await asyncio.to_thread(
+            chat_response,
+            req.message,
+            req.project_id,
+            req.context,
         )
         return result
     except Exception as e:
@@ -137,10 +145,11 @@ async def scale(req: ScaleRequest):
     try:
         ctx = get_context(req.project_id)
         title = ctx.get("idea", "Architecture") if ctx else "Architecture"
-        result = scale_architecture(
-            project_id=req.project_id,
-            target_users=req.target_users,
-            current_title=title,
+        result = await asyncio.to_thread(
+            scale_architecture,
+            req.project_id,
+            req.target_users,
+            title,
         )
         return result
     except Exception as e:
@@ -167,12 +176,12 @@ async def list_domains():
 async def component_paragraphs(req: ComponentParagraphRequest):
     """Generate short walkthrough paragraphs for each component via Ollama."""
     try:
-        result = generate_component_paragraphs(
-            project_id=req.project_id,
-            idea=req.idea,
-            components=[c.model_dump() for c in req.components],
+        result = await asyncio.to_thread(
+            generate_component_paragraphs,
+            req.project_id,
+            req.idea,
+            [c.model_dump() for c in req.components],
         )
         return {"paragraphs": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Component paragraph generation failed: {str(e)}")
-
