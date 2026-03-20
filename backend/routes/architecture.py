@@ -26,6 +26,7 @@ from engine.project_service import (
     auto_name_project,
     save_project,
     build_chat_with_context_prompt,
+    get_project_by_project_id,
 )
 
 import logging
@@ -55,11 +56,10 @@ class ChatRequest(BaseModel):
     context: Optional[dict] = None
 
 class ChatWithContextRequest(BaseModel):
-    """Project-specific chat using phases from Supabase DB."""
+    """Project-specific chat. DB context is fetched server-side by project_id."""
     message: str
     project_id: str
-    phases: list[str]          # keywords/component names from Supabase
-    system_name: Optional[str] = ""  # project name for context
+    system_name: Optional[str] = ""
 
 class SaveProjectRequest(BaseModel):
     user_id: str
@@ -209,11 +209,27 @@ async def chat(req: ChatRequest):
 
 @router.post("/chat-with-context")
 async def chat_with_context(req: ChatWithContextRequest):
-    """Project-specific chat using phases/keywords fetched from Supabase.
-    Each call is stateless — phases are passed directly from the frontend DB query.
+    """Project-specific chat.
+    prompt_1 = user's chat message
+    prompt_2 = keywords + idea fetched from DB using project_id
     """
     try:
-        prompt = build_chat_with_context_prompt(req.phases, req.system_name or req.project_id, req.message)
+        project = await asyncio.to_thread(get_project_by_project_id, req.project_id)
+        db_keywords = project.get("keywords", []) if isinstance(project, dict) else []
+        db_idea = project.get("idea", "") if isinstance(project, dict) else ""
+        db_name = project.get("name", "") if isinstance(project, dict) else ""
+
+        if not isinstance(db_keywords, list):
+            db_keywords = []
+        safe_keywords = [str(k).strip() for k in db_keywords if str(k).strip()]
+        system_name = (req.system_name or db_name or req.project_id).strip()
+
+        prompt = build_chat_with_context_prompt(
+            phases=safe_keywords,
+            system_name=system_name,
+            user_query=req.message,
+            project_idea=db_idea,
+        )
         messages = [
             {"role": "system", "content": "You are a software architecture expert. Be concise and specific."},
             {"role": "user", "content": prompt},
@@ -225,7 +241,6 @@ async def chat_with_context(req: ChatWithContextRequest):
     except Exception as e:
         logger.error(f"chat-with-context failed: {e}")
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
-
 
 @router.post("/scale")
 async def scale(req: ScaleRequest):
@@ -266,3 +281,4 @@ async def component_paragraphs(req: ComponentParagraphRequest):
         return {"paragraphs": result}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Component paragraph generation failed: {str(e)}")
+

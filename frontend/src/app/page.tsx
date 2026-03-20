@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence, useInView } from "framer-motion";
 import {
@@ -12,7 +12,6 @@ import {
   Database,
   Layers,
   Zap,
-  CheckCircle2,
   MessageSquare,
   Code2,
   BrainCircuit,
@@ -29,12 +28,6 @@ import { useAuth } from "@/components/AuthContext";
 /* ──────────────────────────────────────────────────────────── */
 /*  Constants                                                  */
 /* ──────────────────────────────────────────────────────────── */
-const HINTS = [
-  "AI SaaS with multi-tenant auth and billing",
-  "Smart irrigation voice assistant with weather intelligence",
-  "Realtime fintech fraud detection with Kafka + graph DB",
-];
-
 const MISTAKES = [
   {
     icon: AlertTriangle,
@@ -103,7 +96,6 @@ function FadeInSection({ children, className = "", delay = 0 }: { children: Reac
 export default function LandingPage() {
   const router = useRouter();
   const { user, loading, signInWithGoogle } = useAuth();
-  const [prompt, setPrompt] = useState("");
   const [mobileNav, setMobileNav] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const reviewTrackRef = useRef<HTMLDivElement>(null);
@@ -117,19 +109,12 @@ export default function LandingPage() {
   }, [loading, user]);
 
   const launch = () => {
-    if (!prompt.trim()) return;
     // If not logged in, prompt to sign in first
     if (!user) {
       setShowAuthModal(true);
       return;
     }
-    const projectId = `proj_${Date.now().toString(36)}`;
-    sessionStorage.setItem("Arch.AI_pending_idea", prompt.trim());
-    sessionStorage.setItem(`Arch.AI_pending_idea_${projectId}`, prompt.trim());
-    localStorage.setItem(`Arch.AI_pending_idea_${projectId}`, prompt.trim());
-    localStorage.setItem(`Arch.AI_prompt_${projectId}`, prompt.trim());
-    localStorage.setItem("Arch.AI_last_prompt", prompt.trim());
-    router.push(`/architecture/${projectId}`);
+    router.push("/dashboard");
   };
 
   const scrollTo = (id: string) => {
@@ -392,32 +377,23 @@ export default function LandingPage() {
       <section id="prompt-section" className="section-prompt">
         <div className="section-inner">
           <FadeInSection className="section-header">
-            <h2 className="section-title">Ready to Design Your <span className="gradient-text">Architecture</span>?</h2>
-            <p className="section-desc">Describe your product idea below and let AI do the heavy lifting.</p>
+            <h2 className="section-title">Open Your <span className="gradient-text">Dashboard</span></h2>
+            <p className="section-desc">
+              View existing projects or click New Project in dashboard to enter your prompt and generate architecture.
+            </p>
           </FadeInSection>
 
           <FadeInSection delay={0.15}>
             <div className="prompt-card">
               <label className="prompt-label">
                 <Cpu size={14} />
-                Architecture Prompt Terminal
+                Project Dashboard
               </label>
-              <textarea
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder='Example: "Build a food delivery platform with real-time tracking, restaurant management dashboard, payment processing, and push notifications..."'
-                className="prompt-textarea"
-                rows={5}
-              />
-              <div className="prompt-hints">
-                {HINTS.map((h) => (
-                  <button key={h} onClick={() => setPrompt(h)} className="hint-chip">
-                    {h}
-                  </button>
-                ))}
-              </div>
-              <button onClick={launch} className="btn-primary prompt-btn" disabled={!prompt.trim()}>
-                Generate Architecture <ArrowRight size={16} />
+              <p className="section-desc" style={{ marginBottom: 16 }}>
+                Prompt entry now happens after clicking New Project inside dashboard.
+              </p>
+              <button onClick={launch} className="btn-primary prompt-btn">
+                Open Dashboard <ArrowRight size={16} />
               </button>
             </div>
           </FadeInSection>

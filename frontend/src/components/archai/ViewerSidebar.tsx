@@ -34,8 +34,6 @@ interface ViewerSidebarProps {
   architectureSummary?: string;
   onPromptChange: (value: string) => void;
   onToggle: () => void;
-  onRegenerate: () => void;
-  onClearPrompt: () => void;
   /** Called when user picks an existing project from the list */
   onLoadProject?: (project: Project) => void;
   /** Called when user wants to create a new project — shows prompt input */
@@ -50,7 +48,6 @@ export default function ViewerSidebar({
   projectId,
   architectureTitle,
   onToggle,
-  onRegenerate,
   onLoadProject,
   onNewProject,
 }: ViewerSidebarProps) {
@@ -77,12 +74,18 @@ export default function ViewerSidebar({
   const sendMessage = useCallback(async () => {
     const msg = input.trim();
     if (!msg || sending) return;
+    if (!projectId) {
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Select an existing project or create a new one before chatting." },
+      ]);
+      return;
+    }
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setSending(true);
 
     try {
-      const phases = activeProject?.keywords || [];
       const systemName = activeProject?.name || architectureTitle || currentPrompt.slice(0, 60);
 
       const res = await fetch(`${API}/chat-with-context`, {
@@ -93,19 +96,25 @@ export default function ViewerSidebar({
         body: JSON.stringify({
           message: msg,
           project_id: projectId,
-          phases,
           system_name: systemName,
         }),
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.detail || "Chat request failed");
+      }
       setMessages((prev) => [
         ...prev,
         { role: "assistant", content: data.response || "Unable to respond right now." },
       ]);
-    } catch {
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: "Chat is temporarily unavailable. Make sure your backend is running." },
+        {
+          role: "assistant",
+          content: msg || "Chat is temporarily unavailable. Make sure your backend is running.",
+        },
       ]);
     } finally {
       setSending(false);
@@ -299,29 +308,6 @@ export default function ViewerSidebar({
                   </motion.div>
                 )}
               </AnimatePresence>
-
-              {/* Regenerate current */}
-              <button
-                onClick={onRegenerate}
-                style={{
-                  width: "100%",
-                  padding: "8px 10px",
-                  borderRadius: 8,
-                  background: "rgba(20,20,40,0.6)",
-                  border: "1px solid rgba(99,102,241,0.2)",
-                  color: "#94a3b8",
-                  fontSize: 11,
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 6,
-                  marginBottom: 12,
-                }}
-              >
-                ↻ Regenerate Current
-              </button>
-
               {/* Section label */}
               <div style={{ fontSize: 9, fontWeight: 700, color: "#475569", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
                 Your Projects
@@ -516,3 +502,4 @@ export default function ViewerSidebar({
     </motion.div>
   );
 }
+

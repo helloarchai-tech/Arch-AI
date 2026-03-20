@@ -128,14 +128,37 @@ def get_user_projects(user_id: str) -> list[dict]:
         return []
 
 
-def build_chat_with_context_prompt(phases: list[str], system_name: str, user_query: str) -> str:
+def get_project_by_project_id(project_id: str) -> Optional[dict]:
+    """Fetch one project row by logical project_id."""
+    if not SUPABASE_URL or not SUPABASE_SERVICE_KEY:
+        return None
+    try:
+        url = f"{SUPABASE_URL}/rest/v1/projects?project_id=eq.{project_id}&select=*&limit=1"
+        with httpx.Client(timeout=10) as client:
+            resp = client.get(url, headers=_supabase_headers())
+            resp.raise_for_status()
+            rows = resp.json()
+            return rows[0] if rows else None
+    except Exception as e:
+        logger.error(f"Failed to fetch project by project_id={project_id}: {e}")
+        return None
+
+
+def build_chat_with_context_prompt(
+    phases: list[str],
+    system_name: str,
+    user_query: str,
+    project_idea: str = "",
+) -> str:
     """
     Build the Ollama prompt for project-specific chat.
     Uses project phases/keywords from Supabase as context.
     """
     phases_text = "\n".join(f"- {p}" for p in phases) if phases else "No phases available."
+    idea_text = project_idea.strip() or "No idea summary available."
     return (
         f"You are a senior software architect assistant for the project: '{system_name}'.\n\n"
+        f"Project idea:\n{idea_text}\n\n"
         f"This project includes the following components and technologies:\n{phases_text}\n\n"
         f"RULES:\n"
         f"1. ONLY answer questions related to THIS project's architecture, components, or design.\n"

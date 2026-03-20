@@ -39,23 +39,21 @@ function getAuthHeaders(): Record<string, string> {
 type ViewerState = "idle" | "loading" | "ready" | "error";
 
 interface ArchitectureViewerProps {
-  projectId: string;
+  projectId?: string;
 }
 
-interface ChatMsg { role: "user" | "assistant"; content: string; }
-
-export default function ArchitectureViewer({ projectId }: ArchitectureViewerProps) {
+export default function ArchitectureViewer({ projectId: initialProjectId = "" }: ArchitectureViewerProps) {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const timersRef = useRef<number[]>([]);
   const canvasReadyRef = useRef(false);
   const flowRef = useRef<ReactFlowInstance | null>(null);
   const fullArchitectureRef = useRef<ArchitecturePayload | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
 
   const [state, setState] = useState<ViewerState>("idle");
   const [collapsed, setCollapsed] = useState(false);
   const [immersive, setImmersive] = useState(false);
+  const [activeProjectId, setActiveProjectId] = useState(initialProjectId);
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
   const [displayNodes, setDisplayNodes] = useState<ArchNode[]>([]);
@@ -80,6 +78,10 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       router.replace("/");
     }
   }, [authLoading, user, router]);
+
+  useEffect(() => {
+    setActiveProjectId(initialProjectId);
+  }, [initialProjectId]);
 
   const clearTimers = () => {
     timersRef.current.forEach((id) => window.clearTimeout(id));
@@ -171,7 +173,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
   }, [finishReveal]);
 
   const fetchComponentParagraphs = useCallback(
-    async (idea: string, payload: ArchitecturePayload) => {
+    async (idea: string, payload: ArchitecturePayload, forProjectId: string) => {
       setWalkthroughLoading(true);
       const nodeNameById = new Map((payload.nodes || []).map((node) => [node.id, node.data?.label || node.id]));
       const components = (payload.nodes || []).map((node) => ({
@@ -200,7 +202,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
           credentials: "omit",
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({
-            project_id: projectId,
+            project_id: forProjectId,
             idea,
             components,
           }),
@@ -215,23 +217,24 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
         setWalkthroughLoading(false);
       }
     },
-    [projectId]
+    []
   );
 
 
 
   const generateArchitecture = useCallback(
-    async (promptValue: string) => {
+    async (promptValue: string, preferredProjectId?: string) => {
       const cleanPrompt = promptValue.trim();
       if (!cleanPrompt) {
         setState("idle");
         return;
       }
+      const requestedProjectId = (preferredProjectId || activeProjectId || `proj_${Date.now().toString(36)}`).trim();
       setCurrentPrompt(cleanPrompt);
       setFinalPrompt(cleanPrompt);
       setState("loading");
       localStorage.setItem("Arch.AI_last_prompt", cleanPrompt);
-      localStorage.setItem(`Arch.AI_prompt_${projectId}`, cleanPrompt);
+      localStorage.setItem(`Arch.AI_prompt_${requestedProjectId}`, cleanPrompt);
       setComponentParagraphs({});
 
       try {
@@ -241,12 +244,13 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
           mode: "cors",
           credentials: "omit",
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-          body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
+          body: JSON.stringify({ idea: cleanPrompt, project_id: requestedProjectId }),
         });
         const startData = await startRes.json();
         if (!startRes.ok) throw new Error(startData?.detail || "Failed to start generation");
 
-        const effectiveProjectId = startData.project_id || projectId;
+        const effectiveProjectId = startData.project_id || requestedProjectId;
+        setActiveProjectId(effectiveProjectId);
         console.log("[Arch.AI] Generation started for project:", effectiveProjectId);
 
         // 2. Poll /status every 3s until ready (max 10 minutes)
@@ -266,7 +270,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             const data = statusData.result;
             if (!data?.nodes?.length) throw new Error("Generation returned empty architecture");
             setTechStackItems(extractTechStack(data));
-            fetchComponentParagraphs(cleanPrompt, data);
+            fetchComponentParagraphs(cleanPrompt, data, effectiveProjectId);
             startReveal(data);
 
             // Save to Supabase in background (fire and forget)
@@ -302,52 +306,52 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
         setState("error");
       }
     },
-    [projectId, startReveal, fetchComponentParagraphs, user]
+    [activeProjectId, startReveal, fetchComponentParagraphs, user]
   );
 
   /** Load a project from Supabase data — no LLM call needed */
   const loadProjectFromDB = useCallback((proj: Project) => {
+    setActiveProjectId(proj.project_id);
     const arch = proj.architecture as unknown as ArchitecturePayload;
-    if (!arch?.nodes?.length) return;
     setCurrentPrompt(proj.idea || proj.name);
     setFinalPrompt(proj.idea || proj.name);
+    localStorage.setItem(`Arch.AI_prompt_${proj.project_id}`, (proj.idea || proj.name || "").trim());
     setComponentParagraphs({});
+    if (!arch?.nodes?.length) {
+      fullArchitectureRef.current = null;
+      setDisplayNodes([]);
+      setDisplayEdges([]);
+      setRevealMeta(false);
+      setTechStackItems([]);
+      setState("idle");
+      return;
+    }
     setTechStackItems(extractTechStack(arch));
     startReveal(arch);
   }, [startReveal]);
 
   /** Start a brand new project from sidebar input */
   const handleNewProjectIdea = useCallback((idea: string) => {
-    generateArchitecture(idea);
+    const freshProjectId = `proj_${Date.now().toString(36)}`;
+    setActiveProjectId(freshProjectId);
+    generateArchitecture(idea, freshProjectId);
   }, [generateArchitecture]);
 
 
   useEffect(() => {
     const bootstrap = async () => {
-      const pendingPromptForProject = sessionStorage.getItem(`Arch.AI_pending_idea_${projectId}`) || "";
-      const genericPendingPrompt = sessionStorage.getItem("Arch.AI_pending_idea") || "";
-      const pendingPromptFromLocal = localStorage.getItem(`Arch.AI_pending_idea_${projectId}`) || "";
-      const persistedPromptForProject = localStorage.getItem(`Arch.AI_prompt_${projectId}`) || "";
-      const pendingPrompt =
-        pendingPromptForProject ||
-        genericPendingPrompt ||
-        pendingPromptFromLocal ||
-        persistedPromptForProject;
-      if (pendingPromptForProject) sessionStorage.removeItem(`Arch.AI_pending_idea_${projectId}`);
-      if (genericPendingPrompt) sessionStorage.removeItem("Arch.AI_pending_idea");
-      if (pendingPromptFromLocal) localStorage.removeItem(`Arch.AI_pending_idea_${projectId}`);
-
-      // Always prioritize the prompt user just entered from landing.
-      if (pendingPrompt) {
-        setCurrentPrompt(pendingPrompt);
-        setFinalPrompt(pendingPrompt);
-        await generateArchitecture(pendingPrompt);
+      if (!initialProjectId) {
+        setCurrentPrompt("");
+        setFinalPrompt("");
+        setTechStackItems([]);
+        setState("idle");
         return;
       }
 
-      // Prefer prompt/context already linked to this project id to avoid stale sidebar text.
+      const persistedPromptForProject = localStorage.getItem(`Arch.AI_prompt_${initialProjectId}`) || "";
+
       try {
-        const ctxRes = await fetch(`${API}/project/${projectId}/context`, {
+        const ctxRes = await fetch(`${API}/project/${initialProjectId}/context`, {
           mode: "cors",
           credentials: "omit",
           headers: getAuthHeaders(),
@@ -361,6 +365,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             setFinalPrompt(effectivePrompt);
             setTechStackItems(extractTechStack(ctx?.current_architecture || {}));
             if (ctx?.current_architecture?.nodes?.length) {
+              setActiveProjectId(initialProjectId);
               fullArchitectureRef.current = ctx.current_architecture;
               setDisplayNodes(ctx.current_architecture.nodes || []);
               setDisplayEdges(ctx.current_architecture.edges || []);
@@ -368,15 +373,12 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
               setState("ready");
               return;
             }
-            await generateArchitecture(effectivePrompt);
-            return;
           }
         }
       } catch {
-        // Fallback to pending prompt values.
+        // Keep dashboard idle if the context call fails.
       }
 
-      // No prompt available: keep clean idle state instead of forcing sample prompt.
       setCurrentPrompt("");
       setFinalPrompt("");
       setTechStackItems([]);
@@ -385,7 +387,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
 
     bootstrap();
     return () => clearTimers();
-  }, [generateArchitecture, projectId]);
+  }, [initialProjectId]);
 
   useEffect(() => {
     if (!revealMeta) return;
@@ -401,21 +403,6 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
     }, 14);
     return () => window.clearInterval(id);
   }, [revealMeta, displayNodes.length, displayEdges.length]);
-
-  const handleClearPrompt = () => {
-    setCurrentPrompt("");
-    setFinalPrompt("");
-    fullArchitectureRef.current = null;
-    setDisplayNodes([]);
-    setDisplayEdges([]);
-    setRevealMeta(false);
-    setTechStackItems([]);
-    setState("idle");
-    setGuidedMode(false);
-    setTourIndex(0);
-    localStorage.removeItem("Arch.AI_last_prompt");
-    localStorage.removeItem(`Arch.AI_prompt_${projectId}`);
-  };
 
   const handleTourNext = () => {
     if (!guidedMode) return;
@@ -458,7 +445,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
               <ArrowLeft size={16} />
             </button>
             <div>
-              <div className="text-xs uppercase tracking-[0.2em] text-cyan-300">Architecture Viewer</div>
+              <div className="text-xs uppercase tracking-[0.2em] text-cyan-300">Dashboard</div>
               <div className="max-w-[560px] truncate text-sm font-semibold text-slate-100">{title}</div>
             </div>
           </div>
@@ -471,13 +458,11 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             collapsed={collapsed}
             currentPrompt={currentPrompt}
             finalPrompt={finalPrompt}
-            projectId={projectId}
+            projectId={activeProjectId}
             architectureTitle={fullArchitectureRef.current?.title}
             architectureSummary={fullArchitectureRef.current?.summary}
             onPromptChange={setCurrentPrompt}
             onToggle={() => setCollapsed((v) => !v)}
-            onRegenerate={() => generateArchitecture(currentPrompt)}
-            onClearPrompt={handleClearPrompt}
             onLoadProject={loadProjectFromDB}
             onNewProject={handleNewProjectIdea}
           />
@@ -519,7 +504,9 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
               />
             ) : (
               <div className="glass-panel flex h-full items-center justify-center rounded-2xl border border-slate-500/20 text-slate-300">
-                {state === "error" ? "Unable to generate architecture." : "Preparing architecture canvas..."}
+                {state === "error"
+                  ? "Unable to generate architecture."
+                  : "Select an existing project or create a new project to load architecture."}
               </div>
             )}
 
