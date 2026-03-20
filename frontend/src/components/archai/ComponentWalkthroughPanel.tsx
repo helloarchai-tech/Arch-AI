@@ -26,21 +26,23 @@ export default function ComponentWalkthroughPanel({
 }: ComponentWalkthroughPanelProps) {
   return (
     <div className="glass-panel absolute right-4 top-24 z-35 flex h-[70vh] w-[380px] flex-col rounded-2xl border border-cyan-300/30 p-4">
-      <div className="mb-2 flex shrink-0 items-center justify-between">
+      <div className="mb-4 flex shrink-0 items-center justify-between border-b border-slate-500/20 pb-2">
         <div className="flex items-center gap-2 text-cyan-200">
           <Layers size={14} />
           <span className="text-[11px] uppercase tracking-[0.2em]">Component Walkthrough</span>
         </div>
-        <span className="text-xs text-slate-300">
-          {index + 1}/{total}
-        </span>
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-semibold text-slate-300">
+            {index + 1} / {total}
+          </span>
+          <button
+            onClick={onClose}
+            className="rounded-full border border-slate-400/35 bg-slate-900/45 p-1 text-slate-300 transition hover:border-cyan-300/50 hover:text-cyan-200"
+          >
+            <X size={12} />
+          </button>
+        </div>
       </div>
-      <button
-        onClick={onClose}
-        className="absolute right-3 top-3 rounded-full border border-slate-400/35 bg-slate-900/45 p-1 text-slate-300 transition hover:border-cyan-300/50 hover:text-cyan-200"
-      >
-        <X size={12} />
-      </button>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         <AnimatePresence mode="wait">
