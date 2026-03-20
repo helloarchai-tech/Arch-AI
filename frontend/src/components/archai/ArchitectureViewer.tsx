@@ -278,13 +278,11 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             fetchComponentParagraphs(cleanPrompt, data, effectiveProjectId);
             startReveal(data);
 
-            // Save to Supabase in background (fire and forget)
+            // Save via server-side proxy (avoids CORS / 502 from browser direct call)
             if (user?.id) {
-              fetch(`${API}/project/save`, {
+              fetch("/api/save-project", {
                 method: "POST",
-                mode: "cors",
-                credentials: "omit",
-                headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   user_id: user.id,
                   project_id: effectiveProjectId,
@@ -292,9 +290,15 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
                   architecture: data,
                 }),
               })
-                .then(() => {
-                  // Force projects list refresh in sidebar
-                  refetchProjectsRef.current?.();
+                .then(async (res) => {
+                  if (!res.ok) {
+                    const txt = await res.text().catch(() => "");
+                    console.warn(`[Arch.AI] project save returned ${res.status}:`, txt);
+                  } else {
+                    console.log("[Arch.AI] project saved successfully:", effectiveProjectId);
+                    // Force projects list refresh in sidebar
+                    refetchProjectsRef.current?.();
+                  }
                 })
                 .catch((e) => console.warn("[Arch.AI] project save failed:", e));
             }
