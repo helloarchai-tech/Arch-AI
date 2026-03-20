@@ -29,12 +29,15 @@ const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
 function getAuthHeaders(): Record<string, string> {
   const token =
     (typeof window !== "undefined" && localStorage.getItem("token")) || API_KEY;
-  return {
+  const headers: Record<string, string> = {
     "x-api-key": API_KEY,
-    "Authorization": token ? `Bearer ${token}` : "",
     "X-Pinggy-No-Screen": "true",
     "X-Pinggy-Allow-Origin": "*",
   };
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  return headers;
 }
 type ViewerState = "idle" | "loading" | "ready" | "error";
 

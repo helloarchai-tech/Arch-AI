@@ -12,16 +12,6 @@ const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
   ? _trimmed
   : _trimmed.replace(/^http:\/\//i, "https://");
 const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
-const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
-
-function getAuthHeaders(): Record<string, string> {
-  const token = (typeof window !== "undefined" && localStorage.getItem("token")) || API_KEY;
-  return {
-    "x-api-key": API_KEY,
-    "Authorization": token ? `Bearer ${token}` : "",
-    "X-Pinggy-No-Screen": "true",
-  };
-}
 
 interface ChatMsg { role: "user" | "assistant"; content: string; }
 
@@ -88,11 +78,12 @@ export default function ViewerSidebar({
     try {
       const systemName = activeProject?.name || architectureTitle || currentPrompt.slice(0, 60);
 
-      const res = await fetch(`${API}/chat-with-context`, {
+      const endpoint = `${API}/chat-with-context`;
+      const res = await fetch(endpoint, {
         method: "POST",
         mode: "cors",
         credentials: "omit",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           message: msg,
           project_id: projectId,
@@ -113,7 +104,7 @@ export default function ViewerSidebar({
         ...prev,
         {
           role: "assistant",
-          content: msg || "Chat is temporarily unavailable. Make sure your backend is running.",
+          content: msg || `Failed to fetch chat endpoint (${API}/chat-with-context). Check backend/tunnel URL.`,
         },
       ]);
     } finally {
