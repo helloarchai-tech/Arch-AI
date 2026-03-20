@@ -173,7 +173,7 @@ export default function ArchitectureCanvas({
   );
 
   return (
-    <div className="relative h-full w-full overflow-hidden rounded-[24px] border border-cyan-300/20 bg-slate-950/70">
+    <div id="architecture-canvas" className="relative h-full w-full overflow-hidden rounded-[24px] border border-cyan-300/20 bg-slate-950/70">
       <ReactFlow
         nodes={nodes}
         edges={edges}

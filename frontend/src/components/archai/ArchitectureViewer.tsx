@@ -53,6 +53,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
   const canvasReadyRef = useRef(false);
   const flowRef = useRef<ReactFlowInstance | null>(null);
   const fullArchitectureRef = useRef<ArchitecturePayload | null>(null);
+  const refetchProjectsRef = useRef<(() => void) | null>(null);
 
   const [state, setState] = useState<ViewerState>("idle");
   const [collapsed, setCollapsed] = useState(false);
@@ -287,7 +288,12 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
                   idea: cleanPrompt,
                   architecture: data,
                 }),
-              }).catch((e) => console.warn("[Arch.AI] project save failed:", e));
+              })
+                .then(() => {
+                  // Force projects list refresh in sidebar
+                  refetchProjectsRef.current?.();
+                })
+                .catch((e) => console.warn("[Arch.AI] project save failed:", e));
             }
             return;
           }
@@ -460,6 +466,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             onToggle={() => setCollapsed((v) => !v)}
             onLoadProject={loadProjectFromDB}
             onNewProject={handleNewProjectIdea}
+            onRegisterRefetch={(fn) => { refetchProjectsRef.current = fn; }}
           />
         )}
 
@@ -470,6 +477,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
               onStartWalkthrough={startWalkthroughFromBeginning}
               immersive={immersive}
               walkthroughActive={guidedMode}
+              architecture={fullArchitectureRef.current}
             />
 
             {displayNodes.length ? (

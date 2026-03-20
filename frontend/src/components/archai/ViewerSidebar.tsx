@@ -2,11 +2,28 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, Cpu, Send, MessageCircle, FolderOpen, Plus, Clock, Tag, Loader2, AlertCircle } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Cpu,
+  Send,
+  MessageCircle,
+  FolderOpen,
+  Plus,
+  Clock,
+  Tag,
+  Loader2,
+  AlertCircle,
+} from "lucide-react";
 import { useAuth } from "@/components/AuthContext";
 import { useProjects, type Project } from "@/hooks/useProjects";
+import { supabase } from "@/utils/supabase";
 
-interface ChatMsg { role: "user" | "assistant"; content: string; }
+interface ChatMsg {
+  role: "user" | "assistant";
+  content: string;
+  created_at?: string;
+}
 
 function polishAssistantText(content: string): string {
   if (!content) return "";
@@ -57,6 +74,8 @@ interface ViewerSidebarProps {
   onLoadProject?: (project: Project) => void;
   /** Called when user wants to create a new project — shows prompt input */
   onNewProject?: (idea: string) => void;
+  /** Called to manually trigger a projects list refresh */
+  onRegisterRefetch?: (fn: () => void) => void;
 }
 
 type SidebarTab = "projects" | "chat";
@@ -69,9 +88,15 @@ export default function ViewerSidebar({
   onToggle,
   onLoadProject,
   onNewProject,
+  onRegisterRefetch,
 }: ViewerSidebarProps) {
   const { user } = useAuth();
-  const { projects, loading: projectsLoading } = useProjects(user?.id);
+  const { projects, loading: projectsLoading, refetch } = useProjects(user?.id);
+
+  // Register the refetch fn so ArchitectureViewer can call it after project save
+  useEffect(() => {
+    if (onRegisterRefetch) onRegisterRefetch(refetch);
+  }, [onRegisterRefetch, refetch]);
 
   const [tab, setTab] = useState<SidebarTab>("projects");
   const [newIdeaInput, setNewIdeaInput] = useState("");
@@ -81,15 +106,70 @@ export default function ViewerSidebar({
   const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
 
   // Currently active project for chat context
   const activeProject = projects.find((p) => p.project_id === projectId);
 
+  // ── Chat history: load from Supabase when project changes ─────────────
+  useEffect(() => {
+    if (!projectId || !user?.id) {
+      setMessages([]);
+      return;
+    }
+    let cancelled = false;
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from("chat_messages")
+          .select("role, content, created_at")
+          .eq("project_id", projectId)
+          .eq("user_id", user.id)
+          .order("created_at", { ascending: true })
+          .limit(100);
+
+        if (!cancelled && !error && data) {
+          setMessages(
+            data.map((row) => ({
+              role: row.role as "user" | "assistant",
+              content: row.content,
+              created_at: row.created_at,
+            }))
+          );
+        }
+      } catch {
+        // silently ignore — chat still works without history
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    };
+    loadHistory();
+    return () => { cancelled = true; };
+  }, [projectId, user?.id]);
+
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // ── Persist a message pair to Supabase ────────────────────────────────
+  const persistMessages = useCallback(
+    async (userMsg: string, assistantMsg: string) => {
+      if (!user?.id || !projectId) return;
+      try {
+        await supabase.from("chat_messages").insert([
+          { project_id: projectId, user_id: user.id, role: "user", content: userMsg },
+          { project_id: projectId, user_id: user.id, role: "assistant", content: assistantMsg },
+        ]);
+      } catch {
+        // Non-critical — chat still works, just won't be persisted
+      }
+    },
+    [user?.id, projectId]
+  );
+
+  // ── Send chat message ─────────────────────────────────────────────────
   const sendMessage = useCallback(async () => {
     const msg = input.trim();
     if (!msg || sending) return;
@@ -107,8 +187,7 @@ export default function ViewerSidebar({
     try {
       const systemName = activeProject?.name || architectureTitle || currentPrompt.slice(0, 60);
 
-      const endpoint = "/api/chat-with-context";
-      const res = await fetch(endpoint, {
+      const res = await fetch("/api/chat-with-context", {
         method: "POST",
         mode: "cors",
         credentials: "omit",
@@ -123,23 +202,19 @@ export default function ViewerSidebar({
       if (!res.ok) {
         throw new Error(data?.detail || "Chat request failed");
       }
-      setMessages((prev) => [
-        ...prev,
-        { role: "assistant", content: polishAssistantText(data.response || "Unable to respond right now.") },
-      ]);
+      const assistantText = polishAssistantText(data.response || "Unable to respond right now.");
+      setMessages((prev) => [...prev, { role: "assistant", content: assistantText }]);
+
+      // Persist both messages to Supabase (fire-and-forget)
+      persistMessages(msg, assistantText);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "";
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: polishAssistantText(msg || "Chat request failed"),
-        },
-      ]);
+      const errMsg = err instanceof Error ? err.message : "";
+      const displayMsg = polishAssistantText(errMsg || "Chat request failed");
+      setMessages((prev) => [...prev, { role: "assistant", content: displayMsg }]);
     } finally {
       setSending(false);
     }
-  }, [input, sending, projectId, activeProject, architectureTitle, currentPrompt]);
+  }, [input, sending, projectId, activeProject, architectureTitle, currentPrompt, persistMessages]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
@@ -329,6 +404,7 @@ export default function ViewerSidebar({
                   </motion.div>
                 )}
               </AnimatePresence>
+
               {/* Section label */}
               <div style={{ fontSize: 9, fontWeight: 700, color: "#475569", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
                 Your Projects
@@ -418,6 +494,14 @@ export default function ViewerSidebar({
                       Generate an architecture first — then ask questions about it here.
                     </span>
                   </div>
+                </div>
+              )}
+
+              {/* History loading indicator */}
+              {historyLoading && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "6px 14px", fontSize: 9, color: "#64748b" }}>
+                  <Loader2 size={10} style={{ animation: "spin 1s linear infinite" }} />
+                  Loading chat history...
                 </div>
               )}
 
@@ -523,5 +607,3 @@ export default function ViewerSidebar({
     </motion.div>
   );
 }
-
-
