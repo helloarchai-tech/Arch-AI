@@ -76,6 +76,8 @@ interface ViewerSidebarProps {
   onNewProject?: (idea: string) => void;
   /** Called to manually trigger a projects list refresh */
   onRegisterRefetch?: (fn: () => void) => void;
+  /** Non-null while a new project is being generated — shows placeholder in sidebar */
+  pendingProjectName?: string | null;
 }
 
 type SidebarTab = "projects" | "chat";
@@ -89,6 +91,7 @@ export default function ViewerSidebar({
   onLoadProject,
   onNewProject,
   onRegisterRefetch,
+  pendingProjectName,
 }: ViewerSidebarProps) {
   const { user } = useAuth();
   const { projects, loading: projectsLoading, refetch } = useProjects(user?.id);
@@ -409,6 +412,36 @@ export default function ViewerSidebar({
               <div style={{ fontSize: 9, fontWeight: 700, color: "#475569", letterSpacing: 1, textTransform: "uppercase", marginBottom: 8 }}>
                 Your Projects
               </div>
+
+              {/* Pending project — generating placeholder */}
+              {pendingProjectName && (
+                <motion.div
+                  initial={{ opacity: 0, y: -6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    background: "linear-gradient(135deg,rgba(6,182,212,0.12),rgba(99,102,241,0.12))",
+                    border: "1px solid rgba(6,182,212,0.4)",
+                    borderRadius: 8,
+                    padding: "9px 10px",
+                    marginBottom: 6,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 8,
+                  }}
+                >
+                  <motion.span
+                    animate={{ opacity: [0.4, 1, 0.4] }}
+                    transition={{ duration: 1.2, repeat: Infinity }}
+                    style={{ width: 7, height: 7, borderRadius: "50%", background: "#06b6d4", flexShrink: 0, display: "inline-block" }}
+                  />
+                  <div>
+                    <div style={{ fontSize: 10, fontWeight: 700, color: "#67e8f9" }}>Generating…</div>
+                    <div style={{ fontSize: 9, color: "#94a3b8", marginTop: 1, lineHeight: 1.3 }}>
+                      {pendingProjectName.length > 36 ? pendingProjectName.slice(0, 36) + "…" : pendingProjectName}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
 
               {/* Project list */}
               {projectsLoading ? (

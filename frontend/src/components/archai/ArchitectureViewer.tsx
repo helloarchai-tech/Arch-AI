@@ -7,6 +7,7 @@ import type { ReactFlowInstance } from "reactflow";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import ArchitectureCanvas from "./ArchitectureCanvas";
 import ComponentWalkthroughPanel from "./ComponentWalkthroughPanel";
+import ComponentsPanel from "./ComponentsPanel";
 import GenerationOverlay from "./GenerationOverlay";
 import NeuralBackdrop from "./NeuralBackdrop";
 import ViewerSidebar from "./ViewerSidebar";
@@ -59,6 +60,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
   const [collapsed, setCollapsed] = useState(false);
   const [immersive, setImmersive] = useState(false);
   const [activeProjectId, setActiveProjectId] = useState(initialProjectId);
+  const [pendingProjectName, setPendingProjectName] = useState<string | null>(null); // shown while generating
   const [currentPrompt, setCurrentPrompt] = useState("");
   const [finalPrompt, setFinalPrompt] = useState("");
   const [displayNodes, setDisplayNodes] = useState<ArchNode[]>([]);
@@ -104,6 +106,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
     setGuidedMode((full.nodes || []).length > 0);
     setTourIndex(0);
     setTypedSummary("");
+    setPendingProjectName(null); // clear placeholder — real name from arch now
     const hideId = window.setTimeout(() => setShowToast(false), 2200);
     timersRef.current.push(hideId);
     console.log("[Arch.AI] phase 6: complete");
@@ -337,9 +340,27 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
   /** Start a brand new project from sidebar input */
   const handleNewProjectIdea = useCallback((idea: string) => {
     const freshProjectId = `proj_${Date.now().toString(36)}`;
+
+    // Immediately wipe old architecture so UI feels responsive
+    clearTimers();
+    fullArchitectureRef.current = null;
+    setDisplayNodes([]);
+    setDisplayEdges([]);
+    setRevealMeta(false);
+    setGuidedMode(false);
+    setComponentParagraphs({});
+    setTypedSummary("");
+    setState("loading");
+
+    // Show a placeholder name in the header immediately
+    const shortIdea = idea.trim().split(" ").slice(0, 6).join(" ");
+    setPendingProjectName(shortIdea);
+
     setActiveProjectId(freshProjectId);
+    setCurrentPrompt(idea);
+    setFinalPrompt(idea);
     generateArchitecture(idea, freshProjectId);
-  }, [generateArchitecture]);
+  }, [generateArchitecture, clearTimers]);
 
 
   useEffect(() => {
@@ -447,7 +468,14 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             </button>
             <div>
               <div className="text-xs uppercase tracking-[0.2em] text-cyan-300">Dashboard</div>
-              <div className="max-w-[560px] truncate text-sm font-semibold text-slate-100">{title}</div>
+              <div className="max-w-[560px] truncate text-sm font-semibold text-slate-100">
+                {pendingProjectName ? (
+                  <span className="flex items-center gap-2">
+                    <span className="inline-block h-1.5 w-1.5 animate-ping rounded-full bg-cyan-400" />
+                    Generating: {pendingProjectName}…
+                  </span>
+                ) : title}
+              </div>
             </div>
           </div>
         </header>
@@ -467,6 +495,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             onLoadProject={loadProjectFromDB}
             onNewProject={handleNewProjectIdea}
             onRegisterRefetch={(fn) => { refetchProjectsRef.current = fn; }}
+            pendingProjectName={pendingProjectName}
           />
         )}
 
@@ -478,6 +507,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
               immersive={immersive}
               walkthroughActive={guidedMode}
               architecture={fullArchitectureRef.current}
+              flowInstance={flowRef.current}
             />
 
             {displayNodes.length ? (
@@ -589,6 +619,14 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             </AnimatePresence>
           </motion.div>
         </main>
+
+        {/* ── Components Panel (right side) ── */}
+        {!immersive && (
+          <ComponentsPanel
+            nodes={displayNodes}
+            visible={state === "ready" && displayNodes.length > 0}
+          />
+        )}
       </div>
     </div>
   );
