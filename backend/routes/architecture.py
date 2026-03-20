@@ -214,11 +214,12 @@ async def chat_with_context(req: ChatWithContextRequest):
     prompt_2 = keywords + idea fetched from DB using project_id
     """
     try:
-        project = await asyncio.to_thread(get_project_by_project_id, req.project_id)
-        db_keywords = project.get("keywords", []) if isinstance(project, dict) else []
-        db_idea = project.get("idea", "") if isinstance(project, dict) else ""
-        db_name = project.get("name", "") if isinstance(project, dict) else ""
-        project_arch = project.get("architecture", {}) if isinstance(project, dict) else {}
+        project_raw = await asyncio.to_thread(get_project_by_project_id, req.project_id)
+        project = project_raw if isinstance(project_raw, dict) else {}
+        db_keywords = project.get("keywords", [])
+        db_idea = project.get("idea", "")
+        db_name = project.get("name", "")
+        project_arch = project.get("architecture", {})
 
         if not isinstance(db_keywords, list):
             db_keywords = []
@@ -238,8 +239,9 @@ async def chat_with_context(req: ChatWithContextRequest):
 
         # Fallback to in-memory architecture context when DB row is missing/incomplete.
         if not enriched_keywords:
-            ctx_arch = get_architecture_context(req.project_id) or {}
-            current_arch = ctx_arch.get("current_architecture", {}) if isinstance(ctx_arch, dict) else {}
+            ctx_arch_raw = get_architecture_context(req.project_id)
+            ctx_arch = ctx_arch_raw if isinstance(ctx_arch_raw, dict) else {}
+            current_arch = ctx_arch.get("current_architecture", {})
             for node in current_arch.get("nodes", []) or []:
                 data = node.get("data", {}) if isinstance(node, dict) else {}
                 label = str(data.get("label", "")).strip()
