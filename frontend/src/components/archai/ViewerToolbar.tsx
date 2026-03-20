@@ -5,13 +5,10 @@ import {
   BookOpenCheck,
   Download,
   Expand,
-  Layers3,
-  RefreshCw,
   Sparkles,
 } from "lucide-react";
 
 interface ViewerToolbarProps {
-  onRegenerate: () => void;
   onToggleImmersive: () => void;
   onStartWalkthrough: () => void;
   immersive: boolean;
@@ -19,15 +16,12 @@ interface ViewerToolbarProps {
 }
 
 export default function ViewerToolbar({
-  onRegenerate,
   onToggleImmersive,
   onStartWalkthrough,
   immersive,
   walkthroughActive,
 }: ViewerToolbarProps) {
   const controls = [
-    { label: "Regenerate", icon: RefreshCw, onClick: onRegenerate },
-    { label: "Add Component", icon: Layers3 },
     { label: "Export", icon: Download },
   ];
 

@@ -66,8 +66,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
   const [revealMeta, setRevealMeta] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [typedSummary, setTypedSummary] = useState("");
-  const [stackOpen, setStackOpen] = useState(false);
-  const [techStackItems, setTechStackItems] = useState<Array<{ name?: string; technology?: string; category?: string; reason?: string }>>([]); 
   const [componentParagraphs, setComponentParagraphs] = useState<Record<string, string>>({});
   const [guidedMode, setGuidedMode] = useState(false);
   const [tourIndex, setTourIndex] = useState(0);
@@ -273,7 +271,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
           if (statusData?.status === "ready") {
             const data = statusData.result;
             if (!data?.nodes?.length) throw new Error("Generation returned empty architecture");
-            setTechStackItems(extractTechStack(data));
             fetchComponentParagraphs(cleanPrompt, data, effectiveProjectId);
             startReveal(data);
 
@@ -306,7 +303,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
         setDisplayNodes([]);
         setDisplayEdges([]);
         setRevealMeta(false);
-        setTechStackItems([]);
         setState("error");
       }
     },
@@ -326,11 +322,9 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
       setDisplayNodes([]);
       setDisplayEdges([]);
       setRevealMeta(false);
-      setTechStackItems([]);
       setState("idle");
       return;
     }
-    setTechStackItems(extractTechStack(arch));
     startReveal(arch);
   }, [startReveal]);
 
@@ -347,7 +341,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
       if (!initialProjectId) {
         setCurrentPrompt("");
         setFinalPrompt("");
-        setTechStackItems([]);
         setState("idle");
         return;
       }
@@ -367,7 +360,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
           if (effectivePrompt) {
             setCurrentPrompt(effectivePrompt);
             setFinalPrompt(effectivePrompt);
-            setTechStackItems(extractTechStack(ctx?.current_architecture || {}));
             if (ctx?.current_architecture?.nodes?.length) {
               setActiveProjectId(initialProjectId);
               fullArchitectureRef.current = ctx.current_architecture;
@@ -385,7 +377,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
 
       setCurrentPrompt("");
       setFinalPrompt("");
-      setTechStackItems([]);
       setState("idle");
     };
 
@@ -475,7 +466,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
         <main className="relative min-w-0 flex-1 p-3">
           <motion.div layout className="relative h-full w-full">
             <ViewerToolbar
-              onRegenerate={() => generateArchitecture(currentPrompt)}
               onToggleImmersive={() => setImmersive((v) => !v)}
               onStartWalkthrough={startWalkthroughFromBeginning}
               immersive={immersive}
@@ -521,36 +511,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
                 onCancel={finishReveal}
               />
             )}
-
-            <div
-              className="absolute right-4 top-4 z-30"
-              onMouseEnter={() => setStackOpen(true)}
-              onMouseLeave={() => setStackOpen(false)}
-            >
-              <button className="rounded-lg border border-cyan-300/35 bg-slate-950/70 px-3 py-1.5 text-xs font-semibold text-cyan-200">
-                Tech Stack
-              </button>
-              {stackOpen && (
-                <div className="glass-panel mt-2 w-80 rounded-xl border border-cyan-300/30 p-3">
-                  <div className="mb-2 text-[11px] uppercase tracking-[0.16em] text-cyan-200">Generated Stack</div>
-                  <div className="max-h-72 space-y-2 overflow-y-auto text-xs text-slate-200">
-                    {techStackItems.length ? (
-                      techStackItems.map((item, idx) => (
-                        <div key={`${item.name || item.technology}-${idx}`} className="rounded-lg border border-slate-500/25 bg-slate-950/45 p-2">
-                          <div className="font-semibold text-cyan-100">{item.name || item.technology || "Technology"}</div>
-                          <div className="text-[11px] text-slate-300">{item.category || "general"}</div>
-                          {item.reason && <div className="mt-1 text-[11px] text-slate-300">{item.reason}</div>}
-                        </div>
-                      ))
-                    ) : (
-                      <div className="rounded-lg border border-slate-500/20 bg-slate-900/45 p-2 text-slate-300">
-                        Tech stack will appear after architecture generation.
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
 
             {revealMeta && (
               <motion.div
@@ -624,33 +584,6 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
       </div>
     </div>
   );
-}
-
-function extractTechStack(payload: Partial<ArchitecturePayload> | Record<string, unknown>) {
-  const stack = (payload as ArchitecturePayload).techStack;
-  if (Array.isArray(stack) && stack.length) {
-    return stack.slice(0, 16);
-  }
-
-  const nodes = Array.isArray((payload as ArchitecturePayload).nodes)
-    ? (payload as ArchitecturePayload).nodes
-    : [];
-  const dedup = new Map<string, { name?: string; technology?: string; category?: string; reason?: string }>();
-
-  nodes.forEach((node) => {
-    const tech = (node.data?.tech || "").trim();
-    if (!tech) return;
-    const key = tech.toLowerCase();
-    if (!dedup.has(key)) {
-      dedup.set(key, {
-        technology: tech,
-        category: node.data?.layer || node.data?.category || "general",
-        reason: "Derived from generated component metadata.",
-      });
-    }
-  });
-
-  return Array.from(dedup.values()).slice(0, 16);
 }
 
 function buildComponentParagraph(node: ArchNode, index: number, total: number) {
