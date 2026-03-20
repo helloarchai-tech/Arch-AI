@@ -6,15 +6,6 @@ import { ChevronLeft, ChevronRight, Cpu, Send, MessageCircle, FolderOpen, Plus, 
 import { useAuth } from "@/components/AuthContext";
 import { useProjects, type Project } from "@/hooks/useProjects";
 
-const RAW_API =
-  process.env.NEXT_PUBLIC_DIRECT_BACKEND === "true"
-    ? (process.env.NEXT_PUBLIC_API_URL || "/backend-api")
-    : "/backend-api";
-const _trimmed = RAW_API.replace(/\/+$/, "");
-const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
-  ? _trimmed
-  : `${_trimmed}/api`;
-
 interface ChatMsg { role: "user" | "assistant"; content: string; }
 
 function polishAssistantText(content: string): string {
@@ -116,7 +107,7 @@ export default function ViewerSidebar({
     try {
       const systemName = activeProject?.name || architectureTitle || currentPrompt.slice(0, 60);
 
-      const endpoint = `${API}/chat-with-context`;
+      const endpoint = "/api/chat-with-context";
       const res = await fetch(endpoint, {
         method: "POST",
         mode: "cors",
@@ -142,7 +133,7 @@ export default function ViewerSidebar({
         ...prev,
         {
           role: "assistant",
-          content: polishAssistantText(msg || `Failed to fetch chat endpoint (${API}/chat-with-context). Check backend/tunnel URL.`),
+          content: polishAssistantText(msg || "Chat request failed"),
         },
       ]);
     } finally {
