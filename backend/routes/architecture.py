@@ -1,7 +1,7 @@
 """
 Arch.AI Backend — Architecture Routes (Agentic Pipeline)
-All blocking LLM calls wrapped with asyncio.to_thread so the event loop
-stays active and the serveo/cloudflare tunnel doesn't time out.
+All blocking LLM calls use asyncio background tasks so the HTTP connection
+never has to wait for the LLM to finish — prevents tunnel timeouts.
 """
 
 import asyncio
@@ -18,7 +18,10 @@ from engine.ai_engine import (
     scale_architecture,
     generate_component_paragraphs,
 )
-from engine.context_manager import get_context, get_architecture_context
+from engine.context_manager import get_context, get_architecture_context, update_context
+
+import logging
+logger = logging.getLogger("Arch.AI.routes")
 
 router = APIRouter(prefix="/api", tags=["architecture"])
 
@@ -60,6 +63,23 @@ class ComponentParagraphRequest(BaseModel):
     project_id: str
     idea: str
     components: list[ComponentInfo]
+
+
+# ── Background worker ─────────────────────────────────────────────────────
+
+async def _run_generate(idea: str, project_id: str, target_users: int, constraints: str):
+    """Run generation in background thread. Stores result in context_manager."""
+    try:
+        logger.info(f"[bg] Starting architecture generation for {project_id}")
+        result = await asyncio.to_thread(
+            generate_architecture, idea, target_users, constraints, project_id
+        )
+        # Mark as complete in context
+        update_context(project_id, gen_status="ready", gen_result=result)
+        logger.info(f"[bg] Generation complete for {project_id} — {len(result.get('nodes', []))} nodes")
+    except Exception as e:
+        logger.error(f"[bg] Generation failed for {project_id}: {e}")
+        update_context(project_id, gen_status="error", gen_error=str(e))
 
 
 # ── Agentic Pipeline Endpoints ───────────────────────────────────────────
@@ -104,24 +124,48 @@ async def submit_interview(req: InterviewAnswerRequest):
 
 @router.post("/generate")
 async def generate(req: GenerateRequest):
-    """Step 3: Generate domain-specific architecture.
-    Uses asyncio.to_thread so the blocking LLM call doesn't freeze the event loop.
-    This keeps the HTTP connection alive through serveo/cloudflare tunnels.
+    """Step 3: Start architecture generation in the background.
+    Returns immediately with project_id + status='generating'.
+    Frontend should poll /api/project/{id}/status until status='ready'.
     """
+    import uuid
+    project_id = req.project_id or f"proj_{uuid.uuid4().hex[:12]}"
+
+    # Classify immediately (fast, no LLM)
     try:
-        result = await asyncio.to_thread(
-            generate_architecture,
-            req.idea,
-            req.target_users or 10000,
-            req.constraints or "",
-            req.project_id,
-        )
-        return result
-    except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"detail": f"Architecture generation failed: {str(e)}"},
-        )
+        update_context(project_id, idea=req.idea, gen_status="generating", gen_result=None, gen_error=None)
+    except Exception:
+        pass
+
+    # Fire-and-forget — LLM runs in background, HTTP returns immediately
+    asyncio.create_task(_run_generate(
+        idea=req.idea,
+        project_id=project_id,
+        target_users=req.target_users or 10000,
+        constraints=req.constraints or "",
+    ))
+
+    return {"project_id": project_id, "status": "generating"}
+
+
+@router.get("/project/{project_id}/status")
+async def generation_status(project_id: str):
+    """Poll this endpoint to check if generation is complete.
+    Returns status: 'generating' | 'ready' | 'error'
+    When ready, also returns the full architecture in 'result'.
+    """
+    ctx = get_context(project_id)
+    if not ctx:
+        raise HTTPException(status_code=404, detail="Project not found")
+
+    status = ctx.get("gen_status", "generating")
+    if status == "ready":
+        result = ctx.get("gen_result") or ctx.get("architecture")
+        return {"status": "ready", "result": result}
+    elif status == "error":
+        return {"status": "error", "error": ctx.get("gen_error", "Unknown error")}
+    else:
+        return {"status": "generating"}
 
 
 @router.post("/chat")
@@ -129,10 +173,7 @@ async def chat(req: ChatRequest):
     """Context-aware chat about the architecture."""
     try:
         result = await asyncio.to_thread(
-            chat_response,
-            req.message,
-            req.project_id,
-            req.context,
+            chat_response, req.message, req.project_id, req.context,
         )
         return result
     except Exception as e:
@@ -146,10 +187,7 @@ async def scale(req: ScaleRequest):
         ctx = get_context(req.project_id)
         title = ctx.get("idea", "Architecture") if ctx else "Architecture"
         result = await asyncio.to_thread(
-            scale_architecture,
-            req.project_id,
-            req.target_users,
-            title,
+            scale_architecture, req.project_id, req.target_users, title,
         )
         return result
     except Exception as e:

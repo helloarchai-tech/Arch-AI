@@ -271,29 +271,47 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
       setComponentParagraphs({});
 
       try {
-        // LLM generates 7 sequential calls (~12s each) — need long timeout
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 180_000); // 3 min
-
-        const res = await fetch(`${API}/generate`, {
+        // 1. Fire-and-forget — backend returns instantly with project_id
+        const startRes = await fetch(`${API}/generate`, {
           method: "POST",
           mode: "cors",
           credentials: "omit",
-          signal: controller.signal,
           headers: { "Content-Type": "application/json", ...getAuthHeaders() },
           body: JSON.stringify({ idea: cleanPrompt, project_id: projectId }),
         });
-        clearTimeout(timeout);
+        const startData = await startRes.json();
+        if (!startRes.ok) throw new Error(startData?.detail || "Failed to start generation");
 
-        const data = await res.json();
-        console.log("[Arch.AI] generate response status:", res.status, "nodes:", data?.nodes?.length);
-        if (!res.ok || !data?.nodes?.length) {
-          console.error("[Arch.AI] generate response body:", data);
-          throw new Error(data?.error || "Generation failed — no nodes returned");
+        const effectiveProjectId = startData.project_id || projectId;
+        console.log("[Arch.AI] Generation started for project:", effectiveProjectId);
+
+        // 2. Poll /status every 3s until ready (max 10 minutes)
+        const MAX_POLLS = 200;
+        for (let i = 0; i < MAX_POLLS; i++) {
+          await new Promise((r) => setTimeout(r, 3000));
+
+          const statusRes = await fetch(`${API}/project/${effectiveProjectId}/status`, {
+            mode: "cors",
+            credentials: "omit",
+            headers: getAuthHeaders(),
+          });
+          const statusData = await statusRes.json();
+          console.log(`[Arch.AI] Poll ${i + 1}: status=${statusData?.status}`);
+
+          if (statusData?.status === "ready") {
+            const data = statusData.result;
+            if (!data?.nodes?.length) throw new Error("Generation returned empty architecture");
+            setTechStackItems(extractTechStack(data));
+            fetchComponentParagraphs(cleanPrompt, data);
+            startReveal(data);
+            return;
+          }
+          if (statusData?.status === "error") {
+            throw new Error(statusData?.error || "Architecture generation failed");
+          }
+          // still "generating" — keep polling
         }
-        setTechStackItems(extractTechStack(data));
-        fetchComponentParagraphs(cleanPrompt, data);
-        startReveal(data);
+        throw new Error("Generation timed out after 10 minutes");
       } catch (error) {
         console.error("[Arch.AI] generation failed:", error instanceof Error ? error.message : error);
         clearTimers();
@@ -307,6 +325,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
     },
     [projectId, startReveal, fetchComponentParagraphs]
   );
+
 
   useEffect(() => {
     const bootstrap = async () => {
