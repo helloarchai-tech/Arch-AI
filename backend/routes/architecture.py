@@ -218,10 +218,49 @@ async def chat_with_context(req: ChatWithContextRequest):
         db_keywords = project.get("keywords", []) if isinstance(project, dict) else []
         db_idea = project.get("idea", "") if isinstance(project, dict) else ""
         db_name = project.get("name", "") if isinstance(project, dict) else ""
+        project_arch = project.get("architecture", {}) if isinstance(project, dict) else {}
 
         if not isinstance(db_keywords, list):
             db_keywords = []
-        safe_keywords = [str(k).strip() for k in db_keywords if str(k).strip()]
+
+        enriched_keywords: list[str] = [str(k).strip() for k in db_keywords if str(k).strip()]
+
+        # Pull component labels + tech from saved architecture for stronger component grounding.
+        if isinstance(project_arch, dict):
+            for node in project_arch.get("nodes", []) or []:
+                data = node.get("data", {}) if isinstance(node, dict) else {}
+                label = str(data.get("label", "")).strip()
+                tech = str(data.get("tech", "")).strip()
+                if label:
+                    enriched_keywords.append(label)
+                if tech:
+                    enriched_keywords.append(tech)
+
+        # Fallback to in-memory architecture context when DB row is missing/incomplete.
+        if not enriched_keywords:
+            ctx_arch = get_architecture_context(req.project_id) or {}
+            current_arch = ctx_arch.get("current_architecture", {}) if isinstance(ctx_arch, dict) else {}
+            for node in current_arch.get("nodes", []) or []:
+                data = node.get("data", {}) if isinstance(node, dict) else {}
+                label = str(data.get("label", "")).strip()
+                tech = str(data.get("tech", "")).strip()
+                if label:
+                    enriched_keywords.append(label)
+                if tech:
+                    enriched_keywords.append(tech)
+            if not db_idea:
+                db_idea = str(ctx_arch.get("idea", "")).strip()
+
+        # Deduplicate while preserving order.
+        seen = set()
+        safe_keywords = []
+        for kw in enriched_keywords:
+            key = kw.lower()
+            if not kw or key in seen:
+                continue
+            seen.add(key)
+            safe_keywords.append(kw)
+
         system_name = (req.system_name or db_name or req.project_id).strip()
 
         prompt = build_chat_with_context_prompt(

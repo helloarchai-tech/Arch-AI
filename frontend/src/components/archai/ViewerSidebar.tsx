@@ -49,6 +49,7 @@ export default function ViewerSidebar({
   const [tab, setTab] = useState<SidebarTab>("projects");
   const [newIdeaInput, setNewIdeaInput] = useState("");
   const [showNewInput, setShowNewInput] = useState(false);
+  const [expanded, setExpanded] = useState(false);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -131,10 +132,11 @@ export default function ViewerSidebar({
       return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     } catch { return ""; }
   };
+  const sidebarWidth = collapsed ? 0 : expanded ? 360 : 260;
 
   return (
     <motion.div
-      animate={{ width: collapsed ? 0 : 210 }}
+      animate={{ width: sidebarWidth }}
       transition={{ duration: 0.3, ease: "easeInOut" }}
       style={{ overflow: "hidden", flexShrink: 0, position: "relative" }}
     >
@@ -163,7 +165,7 @@ export default function ViewerSidebar({
       </button>
 
       <div style={{
-        width: 210,
+        width: expanded ? 360 : 260,
         height: "100%",
         background: "linear-gradient(180deg, rgba(15,15,30,0.98) 0%, rgba(10,10,25,0.98) 100%)",
         borderRight: "1px solid rgba(99,102,241,0.15)",
@@ -180,13 +182,30 @@ export default function ViewerSidebar({
             <div style={{ width: 28, height: 28, borderRadius: "50%", background: "linear-gradient(135deg,#6366f1,#8b5cf6)", display: "flex", alignItems: "center", justifyContent: "center" }}>
               <Cpu size={14} color="#fff" />
             </div>
-            <div>
+            <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: 12, fontWeight: 700, color: "#e2e8f0", letterSpacing: 0.5 }}>Arch.AI</div>
               <div style={{ fontSize: 9, color: "#6ee7b7", display: "flex", alignItems: "center", gap: 4 }}>
                 <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#6ee7b7", display: "inline-block" }} />
                 AI Agent · Live
               </div>
             </div>
+            <button
+              onClick={() => setExpanded((v) => !v)}
+              style={{
+                border: "1px solid rgba(99,102,241,0.35)",
+                background: "rgba(99,102,241,0.14)",
+                color: "#c7d2fe",
+                borderRadius: 8,
+                padding: "4px 7px",
+                fontSize: 10,
+                fontWeight: 600,
+                cursor: "pointer",
+                flexShrink: 0,
+              }}
+              title={expanded ? "Use normal width" : "Expand sidebar"}
+            >
+              {expanded ? "Normal" : "Expand"}
+            </button>
           </div>
         </div>
 
@@ -495,4 +514,5 @@ export default function ViewerSidebar({
     </motion.div>
   );
 }
+
 
