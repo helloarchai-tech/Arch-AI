@@ -166,7 +166,9 @@ def build_chat_with_context_prompt(
         f"3. Explain purpose, why it is needed in this architecture, and trade-offs.\n"
         f"4. Do NOT reject component questions when they are semantically related to listed components.\n"
         f"5. Only decline when the question is clearly unrelated to software architecture.\n"
-        f"6. Keep answer concise and practical.\n\n"
+        f"6. Keep answer concise and practical.\n"
+        f"7. RESPONSE STYLE: polished plain text with short sections and bullets.\n"
+        f"8. Do NOT output markdown tables, pipes, or raw markdown markers like **, #, or ```.\n\n"
         f"User question: {user_query}\n\n"
         f"Answer:"
     )

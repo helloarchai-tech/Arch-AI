@@ -17,6 +17,42 @@ const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
 
 interface ChatMsg { role: "user" | "assistant"; content: string; }
 
+function polishAssistantText(content: string): string {
+  if (!content) return "";
+  let text = content
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/^#{1,6}\s*/gm, "")
+    .trim();
+
+  const lines = text.split("\n");
+  const hasTable = lines.some((line) => line.includes("|"));
+  if (hasTable) {
+    const normalized: string[] = [];
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) continue;
+      if (/^\|?[-:\s|]+\|?$/.test(trimmed)) continue;
+      if (trimmed.includes("|")) {
+        const cols = trimmed
+          .split("|")
+          .map((c) => c.trim())
+          .filter(Boolean);
+        if (cols.length >= 2) {
+          normalized.push(`${cols[0]}: ${cols.slice(1).join(" | ")}`);
+        } else if (cols.length === 1) {
+          normalized.push(cols[0]);
+        }
+      } else {
+        normalized.push(trimmed);
+      }
+    }
+    text = normalized.join("\n");
+  }
+
+  return text.replace(/\n{3,}/g, "\n\n").trim();
+}
+
 interface ViewerSidebarProps {
   collapsed: boolean;
   currentPrompt: string;
@@ -49,7 +85,6 @@ export default function ViewerSidebar({
   const [tab, setTab] = useState<SidebarTab>("projects");
   const [newIdeaInput, setNewIdeaInput] = useState("");
   const [showNewInput, setShowNewInput] = useState(false);
-  const [expanded, setExpanded] = useState(false);
 
   // Chat state
   const [messages, setMessages] = useState<ChatMsg[]>([]);
@@ -99,7 +134,7 @@ export default function ViewerSidebar({
       }
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", content: data.response || "Unable to respond right now." },
+        { role: "assistant", content: polishAssistantText(data.response || "Unable to respond right now.") },
       ]);
     } catch (err) {
       const msg = err instanceof Error ? err.message : "";
@@ -107,7 +142,7 @@ export default function ViewerSidebar({
         ...prev,
         {
           role: "assistant",
-          content: msg || `Failed to fetch chat endpoint (${API}/chat-with-context). Check backend/tunnel URL.`,
+          content: polishAssistantText(msg || `Failed to fetch chat endpoint (${API}/chat-with-context). Check backend/tunnel URL.`),
         },
       ]);
     } finally {
@@ -132,7 +167,7 @@ export default function ViewerSidebar({
       return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
     } catch { return ""; }
   };
-  const sidebarWidth = collapsed ? 0 : expanded ? 360 : 260;
+  const sidebarWidth = collapsed ? 0 : 360;
 
   return (
     <motion.div
@@ -165,7 +200,7 @@ export default function ViewerSidebar({
       </button>
 
       <div style={{
-        width: expanded ? 360 : 260,
+        width: 360,
         height: "100%",
         background: "linear-gradient(180deg, rgba(15,15,30,0.98) 0%, rgba(10,10,25,0.98) 100%)",
         borderRight: "1px solid rgba(99,102,241,0.15)",
@@ -189,23 +224,6 @@ export default function ViewerSidebar({
                 AI Agent · Live
               </div>
             </div>
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              style={{
-                border: "1px solid rgba(99,102,241,0.35)",
-                background: "rgba(99,102,241,0.14)",
-                color: "#c7d2fe",
-                borderRadius: 8,
-                padding: "4px 7px",
-                fontSize: 10,
-                fontWeight: 600,
-                cursor: "pointer",
-                flexShrink: 0,
-              }}
-              title={expanded ? "Use normal width" : "Expand sidebar"}
-            >
-              {expanded ? "Normal" : "Expand"}
-            </button>
           </div>
         </div>
 
