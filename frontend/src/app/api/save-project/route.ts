@@ -25,9 +25,17 @@ export async function POST(req: Request) {
     const endpoint = `${resolveBackendApi(backendRaw)}/project/save`;
     console.log(`[save-proxy] Forwarding to: ${endpoint}`);
 
+    const forwardHeaders: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+    ["authorization", "x-api-key", "x-pinggy-no-screen", "x-pinggy-allow-origin"].forEach((h) => {
+      const val = req.headers.get(h);
+      if (val) forwardHeaders[h] = val;
+    });
+
     const upstream = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: forwardHeaders,
       body: JSON.stringify(payload),
       cache: "no-store",
     });

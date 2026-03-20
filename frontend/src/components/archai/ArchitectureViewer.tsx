@@ -282,7 +282,7 @@ export default function ArchitectureViewer({ projectId: initialProjectId = "" }:
             if (user?.id) {
               fetch("/api/save-project", {
                 method: "POST",
-                headers: { "Content-Type": "application/json" },
+                headers: { "Content-Type": "application/json", ...getAuthHeaders() },
                 body: JSON.stringify({
                   user_id: user.id,
                   project_id: effectiveProjectId,
