@@ -16,7 +16,10 @@ import type { ArchitecturePayload, ArchEdge, ArchNode } from "./types";
 import { useAuth } from "@/components/AuthContext";
 import type { Project } from "@/hooks/useProjects";
 
-const RAW_API = process.env.NEXT_PUBLIC_API_URL || "/backend-api";
+const RAW_API =
+  process.env.NEXT_PUBLIC_DIRECT_BACKEND === "true"
+    ? (process.env.NEXT_PUBLIC_API_URL || "/backend-api")
+    : "/backend-api";
 const _trimmed = RAW_API.replace(/\/+$/, "");
 const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
   ? _trimmed

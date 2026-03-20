@@ -8,7 +8,10 @@ import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
 import NodeIntelligencePanel from "@/components/NodeIntelligencePanel";
 
-const RAW_API = process.env.NEXT_PUBLIC_API_URL || "/backend-api";
+const RAW_API =
+  process.env.NEXT_PUBLIC_DIRECT_BACKEND === "true"
+    ? (process.env.NEXT_PUBLIC_API_URL || "/backend-api")
+    : "/backend-api";
 const _trimmed = RAW_API.replace(/\/+$/, "");
 const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
   ? _trimmed
