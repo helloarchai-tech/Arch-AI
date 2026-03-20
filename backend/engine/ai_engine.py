@@ -71,8 +71,8 @@ def _call_llm(messages: list[dict], temperature: float = 0.7) -> Optional[str]:
         return None
     try:
         response = client.chat.completions.create(
-            model=model, messages=messages, temperature=temperature, max_tokens=2048,
-            timeout=60,
+            model=model, messages=messages, temperature=temperature, max_tokens=10000,
+            timeout=120,
         )
         return response.choices[0].message.content
     except Exception as e:
