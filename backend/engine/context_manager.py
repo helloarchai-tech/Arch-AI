@@ -14,6 +14,7 @@ logger = logging.getLogger("Arch.AI.context")
 _contexts: dict[str, dict] = {}
 
 
+
 def create_context(project_id: str, idea: str) -> dict:
     """Create a new project context."""
     ctx = {
