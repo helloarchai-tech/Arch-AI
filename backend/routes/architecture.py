@@ -5,6 +5,7 @@ never has to wait for the LLM to finish — prevents tunnel timeouts.
 """
 
 import asyncio
+import uuid as _uuid
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
@@ -17,8 +18,15 @@ from engine.ai_engine import (
     chat_response,
     scale_architecture,
     generate_component_paragraphs,
+    _call_llm,
 )
 from engine.context_manager import get_context, get_architecture_context, update_context
+from engine.project_service import (
+    extract_keywords,
+    auto_name_project,
+    save_project,
+    build_chat_with_context_prompt,
+)
 
 import logging
 logger = logging.getLogger("Arch.AI.routes")
@@ -45,6 +53,19 @@ class ChatRequest(BaseModel):
     message: str
     project_id: str
     context: Optional[dict] = None
+
+class ChatWithContextRequest(BaseModel):
+    """Project-specific chat using phases from Supabase DB."""
+    message: str
+    project_id: str
+    phases: list[str]          # keywords/component names from Supabase
+    system_name: Optional[str] = ""  # project name for context
+
+class SaveProjectRequest(BaseModel):
+    user_id: str
+    project_id: str
+    idea: str
+    architecture: dict         # full architecture JSON
 
 class ScaleRequest(BaseModel):
     project_id: str
@@ -74,7 +95,6 @@ async def _run_generate(idea: str, project_id: str, target_users: int, constrain
         result = await asyncio.to_thread(
             generate_architecture, idea, target_users, constraints, project_id
         )
-        # Mark as complete in context
         update_context(project_id, gen_status="ready", gen_result=result)
         logger.info(f"[bg] Generation complete for {project_id} — {len(result.get('nodes', []))} nodes")
     except Exception as e:
@@ -86,7 +106,6 @@ async def _run_generate(idea: str, project_id: str, target_users: int, constrain
 
 @router.post("/classify")
 async def classify(req: ClassifyRequest):
-    """Step 1: Classify user idea into a domain category."""
     try:
         result = await asyncio.to_thread(classify_idea, req.idea)
         return result
@@ -96,7 +115,6 @@ async def classify(req: ClassifyRequest):
 
 @router.get("/interview/{project_id}")
 async def get_interview(project_id: str):
-    """Step 2: Get clarification questions for the project domain."""
     try:
         result = get_questions(project_id)
         if "error" in result:
@@ -110,7 +128,6 @@ async def get_interview(project_id: str):
 
 @router.post("/interview/submit")
 async def submit_interview(req: InterviewAnswerRequest):
-    """Step 2b: Submit clarification answers."""
     try:
         result = await asyncio.to_thread(submit_answers, req.project_id, req.answers)
         if "error" in result:
@@ -124,20 +141,15 @@ async def submit_interview(req: InterviewAnswerRequest):
 
 @router.post("/generate")
 async def generate(req: GenerateRequest):
-    """Step 3: Start architecture generation in the background.
-    Returns immediately with project_id + status='generating'.
-    Frontend should poll /api/project/{id}/status until status='ready'.
+    """Start architecture generation in background. Returns instantly.
+    Frontend polls /api/project/{id}/status until status='ready'.
     """
-    import uuid
-    project_id = req.project_id or f"proj_{uuid.uuid4().hex[:12]}"
-
-    # Classify immediately (fast, no LLM)
+    project_id = req.project_id or f"proj_{_uuid.uuid4().hex[:12]}"
     try:
         update_context(project_id, idea=req.idea, gen_status="generating", gen_result=None, gen_error=None)
     except Exception:
         pass
 
-    # Fire-and-forget — LLM runs in background, HTTP returns immediately
     asyncio.create_task(_run_generate(
         idea=req.idea,
         project_id=project_id,
@@ -150,10 +162,7 @@ async def generate(req: GenerateRequest):
 
 @router.get("/project/{project_id}/status")
 async def generation_status(project_id: str):
-    """Poll this endpoint to check if generation is complete.
-    Returns status: 'generating' | 'ready' | 'error'
-    When ready, also returns the full architecture in 'result'.
-    """
+    """Poll this to check generation progress. Returns status + result when done."""
     ctx = get_context(project_id)
     if not ctx:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -164,13 +173,31 @@ async def generation_status(project_id: str):
         return {"status": "ready", "result": result}
     elif status == "error":
         return {"status": "error", "error": ctx.get("gen_error", "Unknown error")}
-    else:
-        return {"status": "generating"}
+    return {"status": "generating"}
+
+
+@router.post("/project/save")
+async def save_project_endpoint(req: SaveProjectRequest):
+    """Save generated architecture to Supabase projects table.
+    Called by frontend after generation completes.
+    Extracts keywords and auto-names the project from the architecture.
+    """
+    try:
+        keywords = await asyncio.to_thread(extract_keywords, req.idea, req.architecture)
+        name = auto_name_project(req.idea, req.architecture)
+        result = await asyncio.to_thread(
+            save_project,
+            req.user_id, req.project_id, name, keywords, req.architecture, req.idea
+        )
+        return {"saved": True, "name": name, "keywords": keywords, "result": result}
+    except Exception as e:
+        logger.error(f"Save project failed: {e}")
+        return JSONResponse(status_code=500, content={"saved": False, "error": str(e)})
 
 
 @router.post("/chat")
 async def chat(req: ChatRequest):
-    """Context-aware chat about the architecture."""
+    """Legacy context-aware chat (uses server-side context memory)."""
     try:
         result = await asyncio.to_thread(
             chat_response, req.message, req.project_id, req.context,
@@ -180,9 +207,28 @@ async def chat(req: ChatRequest):
         raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
 
 
+@router.post("/chat-with-context")
+async def chat_with_context(req: ChatWithContextRequest):
+    """Project-specific chat using phases/keywords fetched from Supabase.
+    Each call is stateless — phases are passed directly from the frontend DB query.
+    """
+    try:
+        prompt = build_chat_with_context_prompt(req.phases, req.system_name or req.project_id, req.message)
+        messages = [
+            {"role": "system", "content": "You are a software architecture expert. Be concise and specific."},
+            {"role": "user", "content": prompt},
+        ]
+        response_text = await asyncio.to_thread(_call_llm, messages, 0.5)
+        if not response_text:
+            return {"response": "I'm unable to reach the AI right now. Please try again shortly."}
+        return {"response": response_text.strip()}
+    except Exception as e:
+        logger.error(f"chat-with-context failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Chat failed: {str(e)}")
+
+
 @router.post("/scale")
 async def scale(req: ScaleRequest):
-    """Re-evaluate architecture for different user scale."""
     try:
         ctx = get_context(req.project_id)
         title = ctx.get("idea", "Architecture") if ctx else "Architecture"
@@ -196,7 +242,6 @@ async def scale(req: ScaleRequest):
 
 @router.get("/project/{project_id}/context")
 async def project_context(project_id: str):
-    """Get full project context (domain, interview, architecture, chat)."""
     ctx = get_context(project_id)
     if not ctx:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -205,14 +250,12 @@ async def project_context(project_id: str):
 
 @router.get("/domains")
 async def list_domains():
-    """List all available domain categories."""
     from engine.intent_classifier import get_all_domains
     return {"domains": get_all_domains()}
 
 
 @router.post("/component-paragraphs")
 async def component_paragraphs(req: ComponentParagraphRequest):
-    """Generate short walkthrough paragraphs for each component via Ollama."""
     try:
         result = await asyncio.to_thread(
             generate_component_paragraphs,

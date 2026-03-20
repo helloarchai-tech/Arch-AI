@@ -14,6 +14,7 @@ import ViewerToolbar from "./ViewerToolbar";
 import { buildRevealPlan, type BuildPhase } from "./StaggeredReveal";
 import type { ArchitecturePayload, ArchEdge, ArchNode } from "./types";
 import { useAuth } from "@/components/AuthContext";
+import type { Project } from "@/hooks/useProjects";
 
 const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
 // Normalize: force https (except localhost), ensure /api suffix is always present
@@ -70,10 +71,6 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
   const [tourIndex, setTourIndex] = useState(0);
   const [tourDirection, setTourDirection] = useState<"next" | "back">("next");
   const [walkthroughLoading, setWalkthroughLoading] = useState(false);
-  const [chatMessages, setChatMessages] = useState<ChatMsg[]>([]);
-  const [chatInput, setChatInput] = useState("");
-  const [chatSending, setChatSending] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
 
   const title = fullArchitectureRef.current?.title || "Architecture Studio";
 
@@ -221,40 +218,7 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
     [projectId]
   );
 
-  // Chat handler — sends to /api/chat and enforces architecture-specific answers
-  const handleChatSend = useCallback(async () => {
-    const msg = chatInput.trim();
-    if (!msg || chatSending) return;
-    setChatInput("");
-    setChatMessages((prev) => [...prev, { role: "user", content: msg }]);
-    setChatSending(true);
-    try {
-      const res = await fetch(`${API}/chat`, {
-        method: "POST",
-        mode: "cors",
-        credentials: "omit",
-        headers: { "Content-Type": "application/json", ...getAuthHeaders() },
-        body: JSON.stringify({
-          message: msg,
-          project_id: projectId,
-          context: fullArchitectureRef.current
-            ? { title: fullArchitectureRef.current.title, summary: fullArchitectureRef.current.summary }
-            : {},
-        }),
-      });
-      const data = await res.json();
-      setChatMessages((prev) => [...prev, { role: "assistant", content: data.response || "Unable to respond right now." }]);
-    } catch {
-      setChatMessages((prev) => [...prev, { role: "assistant", content: "Chat is temporarily unavailable. Please try again." }]);
-    } finally {
-      setChatSending(false);
-    }
-  }, [chatInput, chatSending, projectId]);
 
-  // Auto-scroll chat to bottom
-  useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [chatMessages]);
 
   const generateArchitecture = useCallback(
     async (promptValue: string) => {
@@ -304,12 +268,27 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             setTechStackItems(extractTechStack(data));
             fetchComponentParagraphs(cleanPrompt, data);
             startReveal(data);
+
+            // Save to Supabase in background (fire and forget)
+            if (user?.id) {
+              fetch(`${API}/project/save`, {
+                method: "POST",
+                mode: "cors",
+                credentials: "omit",
+                headers: { "Content-Type": "application/json", ...getAuthHeaders() },
+                body: JSON.stringify({
+                  user_id: user.id,
+                  project_id: effectiveProjectId,
+                  idea: cleanPrompt,
+                  architecture: data,
+                }),
+              }).catch((e) => console.warn("[Arch.AI] project save failed:", e));
+            }
             return;
           }
           if (statusData?.status === "error") {
             throw new Error(statusData?.error || "Architecture generation failed");
           }
-          // still "generating" — keep polling
         }
         throw new Error("Generation timed out after 10 minutes");
       } catch (error) {
@@ -323,8 +302,24 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
         setState("error");
       }
     },
-    [projectId, startReveal, fetchComponentParagraphs]
+    [projectId, startReveal, fetchComponentParagraphs, user]
   );
+
+  /** Load a project from Supabase data — no LLM call needed */
+  const loadProjectFromDB = useCallback((proj: Project) => {
+    const arch = proj.architecture as unknown as ArchitecturePayload;
+    if (!arch?.nodes?.length) return;
+    setCurrentPrompt(proj.idea || proj.name);
+    setFinalPrompt(proj.idea || proj.name);
+    setComponentParagraphs({});
+    setTechStackItems(extractTechStack(arch));
+    startReveal(arch);
+  }, [startReveal]);
+
+  /** Start a brand new project from sidebar input */
+  const handleNewProjectIdea = useCallback((idea: string) => {
+    generateArchitecture(idea);
+  }, [generateArchitecture]);
 
 
   useEffect(() => {
@@ -483,6 +478,8 @@ export default function ArchitectureViewer({ projectId }: ArchitectureViewerProp
             onToggle={() => setCollapsed((v) => !v)}
             onRegenerate={() => generateArchitecture(currentPrompt)}
             onClearPrompt={handleClearPrompt}
+            onLoadProject={loadProjectFromDB}
+            onNewProject={handleNewProjectIdea}
           />
         )}
 
