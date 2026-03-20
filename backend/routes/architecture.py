@@ -220,6 +220,8 @@ async def chat_with_context(req: ChatWithContextRequest):
         db_idea = project.get("idea", "")
         db_name = project.get("name", "")
         project_arch = project.get("architecture", {})
+        if not isinstance(project_arch, dict):
+            project_arch = {}
 
         if not isinstance(db_keywords, list):
             db_keywords = []
@@ -242,8 +244,12 @@ async def chat_with_context(req: ChatWithContextRequest):
             ctx_arch_raw = get_architecture_context(req.project_id)
             ctx_arch = ctx_arch_raw if isinstance(ctx_arch_raw, dict) else {}
             current_arch = ctx_arch.get("current_architecture", {})
-            for node in current_arch.get("nodes", []) or []:
+            if not isinstance(current_arch, dict):
+                current_arch = {}
+            for node in (current_arch.get("nodes", []) or []):
                 data = node.get("data", {}) if isinstance(node, dict) else {}
+                if not isinstance(data, dict):
+                    data = {}
                 label = str(data.get("label", "")).strip()
                 tech = str(data.get("tech", "")).strip()
                 if label:
