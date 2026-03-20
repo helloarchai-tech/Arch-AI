@@ -6,12 +6,11 @@ import { ChevronLeft, ChevronRight, Cpu, Send, MessageCircle, FolderOpen, Plus, 
 import { useAuth } from "@/components/AuthContext";
 import { useProjects, type Project } from "@/hooks/useProjects";
 
-const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
+const RAW_API = process.env.NEXT_PUBLIC_API_URL || "/backend-api";
 const _trimmed = RAW_API.replace(/\/+$/, "");
-const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
+const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
   ? _trimmed
-  : _trimmed.replace(/^http:\/\//i, "https://");
-const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
+  : `${_trimmed}/api`;
 
 interface ChatMsg { role: "user" | "assistant"; content: string; }
 

@@ -8,13 +8,11 @@ import ArchitectureCanvas from "@/components/ArchitectureCanvas";
 import ExportControls from "@/components/ExportControls";
 import NodeIntelligencePanel from "@/components/NodeIntelligencePanel";
 
-const RAW_API = process.env.NEXT_PUBLIC_API_URL || "https://handbags-affiliates-lobby-arabic.trycloudflare.com/api";
-// Normalize: force https (except localhost), ensure /api suffix is always present
+const RAW_API = process.env.NEXT_PUBLIC_API_URL || "/backend-api";
 const _trimmed = RAW_API.replace(/\/+$/, "");
-const _secure = /^http:\/\/(localhost|127\.0\.0\.1)/i.test(_trimmed)
+const API = _trimmed.endsWith("/api") || _trimmed.endsWith("/backend-api")
   ? _trimmed
-  : _trimmed.replace(/^http:\/\//i, "https://");
-const API = _secure.endsWith("/api") ? _secure : `${_secure}/api`;
+  : `${_trimmed}/api`;
 const API_KEY = process.env.NEXT_PUBLIC_BACKEND_API_KEY || "";
 
 /** Returns auth headers — prefers a JWT stored at login, falls back to static API key. */
